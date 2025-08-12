@@ -1,0 +1,36 @@
+{
+  "dots": false,
+  "arrows": true,
+  "infinite": false,
+  "centerMode": false,
+  "slidesToShow": 2,
+  "slidesToScroll": 1,
+  "focusOnSelect": true,
+  "initialSlide": 0,
+  "autoplay": false,
+  "autoplaySpeed": 4000,
+  "className": "videoCarousel",
+  "responsive": [
+    {
+      "breakpoint": 1024,
+      "settings": {
+        "slidesToShow": 1,
+        "slidesToScroll": 1
+      }
+    },
+    {
+      "breakpoint": 600,
+      "settings": {
+        "slidesToShow": 1,
+        "slidesToScroll": 1
+      }
+    },
+    {
+      "breakpoint": 480,
+      "settings": {
+        "slidesToShow": 1,
+        "slidesToScroll": 1
+      }
+    }
+  ]
+}

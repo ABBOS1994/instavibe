@@ -1,0 +1,202 @@
+[
+  {
+    "title": "1-Modul",
+    "text": "Asoslar",
+    "description": [
+      {
+        "header": "Baza darslari",
+        "content": [
+          "Darslarga yondashuv",
+          "Samarali shaxsiy brend qurish fundamental tushunchalar",
+          "Profilni tartibga keltirish (amaliyot)",
+          "Shaxsiyatni ochish 100+ savollar va unga javob",
+          "Shaxsiy storytelling",
+          "Maqsad qo‘yish",
+          "Qo‘rquvlardan qutilish",
+          "Foydali odatlar (shaxsiy brend uchun)",
+          "Xarizmani rivojlantirish"
+        ],
+        "bonus": [
+          "Instagram Xavfsizligi, Instrumentlar, Stories va Reelslar bo‘yicha qo‘llanma"
+        ],
+        "result": "Shaxsiy Brend qurishdan maqsadni aniqlash, nisha belgilash, sahifani professional yuritishga tayyorlash va raspakovka lichnostni o‘tkazish"
+      }
+    ]
+  },
+  {
+    "title": "2-Modul",
+    "text": "Strategiya va Kontent Reja",
+    "description": [
+      {
+        "header": "Strategik darslar",
+        "content": [
+          "Maqsadli auditoriya | Nisha tanlash",
+          "Kuchli Strategiya tuzish",
+          "Kontent reja tuzish",
+          "Real keyslar razbori",
+          "Sun’iy intellekt orqali kontent yaratish",
+          "Noyob unikal jihatlarni aniqlash",
+          "Raqobatchilarni chuqur tahlil qilish",
+          "Raqamlashtirish"
+        ],
+        "bonus": ["Strategiya shabloni", "Kontent reja shabloni"],
+        "result": "O‘z nishalarini aniqlaydi, maqsadli auditoriyalarini topadi, raqobatchilarni tahlil qiladi, strategiya va kontent rejasini tuzadi"
+      }
+    ]
+  },
+  {
+    "title": "3-Modul",
+    "text": "Reels",
+    "description": [
+      {
+        "header": "Reels darslari",
+        "content": [
+          "Reels bo‘yicha bilishimiz kerak bo‘lgan qoidalar",
+          "Mutaxassislik reelslari, reelslarni varonka sifatida ishlatish",
+          "Reels qo‘yishdagi TOP xatoliklar",
+          "TOPga chiquvchi reels sirlari",
+          "TOP va yomon Reelslar tahlili",
+          "Vizual nima va u nega kerak?",
+          "Sahifamizda ham sotuvchi ham shaxsiyatimizni ochuvchi vizualni yaratish"
+        ],
+        "bonus": ["Reels g‘oyalar bo‘yicha TOP shablonlar"],
+        "result": "O‘quvchilar TOP reelslar tayyorlashni, ko‘p ko‘rishlarga erishishni va vizualni yaratishni o‘rganishadi"
+      }
+    ]
+  },
+  {
+    "title": "4-Modul",
+    "text": "Stories va Postlar",
+    "description": [
+      {
+        "header": "Stories/Post darslari",
+        "content": [
+          "Stories nima va nima maqsadlarda foydalanish mumkin?",
+          "Qanday qilib ko‘p ko‘riladigan storieslar olinadi",
+          "Stories qo‘yishdagi asosiy xatolar",
+          "Stories senariylarini yozish va rejali yuritish",
+          "Qiziqishni oshirish va oxvatlarni baland ushlab turish",
+          "Storiytelling orqali obunachilar mehrini oshirish",
+          "Post nima va qanday foydalanish kerak?",
+          "Post uchun Idealar o‘ylab topish",
+          "Post matni va ishonchni oshiruvchi usullar",
+          "Post chiqarishdagi TOP xatoliklar",
+          "Post uchun maqola yozish asoslari"
+        ],
+        "bonus": [
+          "Mutaxassisligimizni ko‘rsatuvchi storieslar uchun shablonlar",
+          "Maqola yozish uchun g‘oyalar"
+        ],
+        "result": "O‘quvchilar stories va postlarni samarali yuritishni, maqola yozishni o‘rganishadi"
+      }
+    ]
+  },
+  {
+    "title": "5-Modul",
+    "text": "Texnik Qism",
+    "description": [
+      {
+        "header": "Texnik darslar",
+        "content": [
+          "Mening kameram sozlamalari",
+          "Telefonda videoga olish",
+          "Capcut dasturida montaj qilish",
+          "Telefonda suratga olish",
+          "Telefonda suratlarni tahrirlash",
+          "Kontent chiqarish uchun texnikalar"
+        ],
+        "bonus": ["PDF qo‘llanma va shablonlar"],
+        "result": "O‘quvchilar mustaqil kontent yaratish va montaj qilish ko‘nikmasiga ega bo‘lishadi"
+      }
+    ]
+  },
+  {
+    "title": "6-Modul",
+    "text": "Trafik",
+    "description": [
+      {
+        "header": "Trafik darslari",
+        "content": [
+          "Trafik nima va nega kerak?",
+          "Yangi trafik olib kirish yo‘llari",
+          "Reels va Postlar orqali obunachilar yig‘ish",
+          "Blogerlar bilan reklama kelishuvlari",
+          "Reklama olishdagi xatoliklar",
+          "O‘z obunachilari orqali rivojlantirish",
+          "AI orqali obunachilarni ko‘paytirish"
+        ],
+        "bonus": ["Reklama blogerlari nishlar"],
+        "result": "O‘quvchilar blogga trafik olib kirishning pullik va bepul usullarini o‘rganishadi"
+      }
+    ]
+  },
+  {
+    "title": "7-Modul",
+    "text": "Sotuv",
+    "description": [
+      {
+        "header": "Sotuv darslari",
+        "content": [
+          "Qanday kontentlar obunachilarda ishonch uyg‘otadi?",
+          "Stories orqali sotish usullari",
+          "Reels sotuvdagi vazifasi",
+          "Sotuvchi reelslardan foydalanish",
+          "Reklama formullari",
+          "Sotuvchi reels varonkasi",
+          "Target reklamasi va qo‘llanishi",
+          "Target yoqish va maqsadli auditoriyaga yo‘naltirish"
+        ],
+        "bonus": ["Sotuvchi Stories va Reelslar uchun shablonlar"],
+        "result": "O‘quvchilar blog orqali mahsulot va xizmatlarini sotishni o‘rganishadi"
+      }
+    ]
+  },
+  {
+    "title": "8-Modul",
+    "text": "Boshqa Platformalar",
+    "description": [
+      {
+        "header": "Platformalar darslari",
+        "content": [
+          "Telegramda blog yuritish",
+          "YouTubeda blog yuritish",
+          "Boshqa platformalarda aktivlarni jamlash",
+          "TOP kanallar tahlili"
+        ],
+        "bonus": ["Shablon va qo‘llanmalar"],
+        "result": "O‘quvchilar Telegram va YouTube platformalarida ishlashni o‘rganishadi"
+      }
+    ]
+  },
+  {
+    "title": "9-10-Modul",
+    "text": "BONUS Spikerlar",
+    "description": [
+      {
+        "header": "Spiker darslari",
+        "content": [
+          "Humoyun Sobirov - Zapusk",
+          "Dilshod Abdullayev (Tuning House) - Bloging",
+          "Najot Nur - Notiqlik va Xarizma"
+        ],
+        "result": "O‘quvchilar bloglarini rivojlantirish, zapusk va xarizma bo‘yicha bilim olishadi"
+      }
+    ]
+  },
+  {
+    "title": "11-Modul",
+    "text": "Sun’iy Intellekt",
+    "description": [
+      {
+        "header": "AI bilan ishlash",
+        "content": [
+          "AI yordamida kontent yaratish",
+          "AI vositalari va platformalari",
+          "AI yordamida dizayn, video va matn ishlash",
+          "AI integratsiyasi orqali biznesni avtomatlashtirish"
+        ],
+        "result": "O‘quvchilar AI yordamida kontent yaratish, tahlil qilish va avtomatlashtirishni o‘rganishadi"
+      }
+    ]
+  }
+]

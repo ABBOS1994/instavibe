@@ -1,0 +1,156 @@
+@import '~bootstrap/dist/css/bootstrap.min.css';
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+* {
+  box-sizing: border-box;
+}
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+button {
+  position: relative;
+  display: inline-block;
+  cursor: pointer;
+  outline: none;
+  border: 0;
+  vertical-align: middle;
+  text-decoration: none;
+  background: transparent;
+  padding: 0;
+  font-size: inherit;
+  font-family: inherit;
+}
+button.brandBtn {
+  background-color: #c3ff51;
+  color: #151718;
+  border: none;
+  border-radius: 15px;
+  padding: 10px 25px;
+  height: auto;
+  margin: auto;
+}
+button.brandBtn:hover {
+  background-color: transparent;
+  border: 1px solid #c3ff51;
+  color: #c3ff51;
+}
+button.brandBtn:active {
+  background-color: transparent !important;
+  border: 1px solid #c3ff51 !important;
+  color: #c3ff51 !important;
+}
+button.learn-more {
+  margin-top: 40px;
+}
+button.learn-more .circle {
+  transition: all 0.45s cubic-bezier(0.65, 0, 0.076, 1);
+  border-radius: 10px;
+  border: 1px solid #3a3f42;
+  padding: 10px;
+  position: relative;
+  display: inline-block;
+  top: -2px;
+  right: -1px;
+  animation: btnAnimation 2s cubic-bezier(0.68, -0.55, 0.265, 1.55) 0.5s
+    infinite alternate;
+}
+button.learn-more .button-text {
+  transition: all 0.45s cubic-bezier(0.65, 0, 0.076, 1);
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  margin: 0 0 0 15px;
+  color: #ffffff;
+  text-transform: uppercase;
+  font-size: 16px;
+  font-weight: 400;
+  letter-spacing: 0.03em;
+  text-align: center;
+  border-radius: 10px;
+  border: 1px solid #3a3f42;
+  padding: 15px 30px;
+}
+button:hover .circle {
+  border: 1px solid #c3ff51;
+}
+button:hover .button-text {
+  color: #c3ff51;
+  border: 1px solid;
+}
+
+body {
+  background-color: #151718;
+  color: #ffffff;
+  font-family: Inter, sans-serif;
+}
+
+.navBar {
+  max-width: 895px;
+  margin: 30px auto;
+  border: 1px solid #3a3f42;
+  border-radius: 15px;
+  height: 84px;
+  padding: 24px;
+  justify-content: center;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.02);
+  backdrop-filter: blur(2px);
+}
+.navBar .nav-link {
+  padding: 30px;
+  margin: 30px;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: #ffffff;
+}
+.navBar .nav-link:hover {
+  color: #c3ff51;
+}
+
+.headerSection {
+  height: 590px;
+  max-width: 1200px;
+  margin: 45px auto 0 auto;
+  background:
+    url(../public/img/headerImage.png) no-repeat right bottom 50%/40%,
+    url(../public/img/headerBackground.png) no-repeat right bottom 50%/50%;
+}
+.headerSection .container h1 {
+  padding-top: 194px;
+  max-width: 915px;
+  font-size: 65px;
+  font-weight: 600;
+  line-height: 72px;
+  letter-spacing: 0;
+  text-align: left;
+}
+.headerSection .container h1 span {
+  color: #c3ff51;
+}
+
+.marquee {
+  font-size: 18px;
+  font-weight: 400;
+  line-height: 22px;
+  letter-spacing: 0.03em;
+  text-align: center;
+  padding: 14px 0;
+  border: 1px solid #3a3f42;
+}
+.marquee .brand {
+  color: #c3ff51;
+}
+
+@keyframes btnAnimation {
+  from {
+    transform: translate(10px, 0);
+  }
+  to {
+    transform: translate(0, 0);
+  }
+}
+
+/*# sourceMappingURL=main.css.map */
