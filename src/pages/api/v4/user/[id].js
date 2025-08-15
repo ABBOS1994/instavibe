@@ -12,7 +12,7 @@ import {
 async function handler(req, res) {
   await dbConnect()
 
-  return authGuard([ROLES.ADMIN])(req, res, async () => {
+  return authGuard([ROLES.ADMIN, ROLES.CURATOR])(req, res, async () => {
     try {
       const { id } = req.query
 
