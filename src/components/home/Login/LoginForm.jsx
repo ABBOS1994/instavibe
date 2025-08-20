@@ -27,7 +27,7 @@ const LoginForm = () => {
 
     setLoading(true)
     try {
-      const res = await axiosInstance.post('/login', formData)
+      const res = await axiosInstance.post('auth/login', formData)
       const { token, user, message } = res.data
 
       localStorage.setItem('Token', token)

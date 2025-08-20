@@ -1,29 +1,62 @@
-// src/components/admins/Service.js
+// src/components/admin/Service.js
 import axiosInstance from '../../config/axiosConfig'
 import { toast } from 'react-toastify'
 
+export const Success = (message) => toast.success(message)
+export const Warning = (message) => toast.warning(message)
+export const Info = (message) => toast.info(message)
+export const Error = (e) => toast.error(e)
+
 const handleSuccess = (message) => Success(message)
 const handleError = (e) => {
-  Error(e?.message || e?.data.message || 'Xatolik yuz berdi')
+  const msg =
+    e?.response?.data?.message ||
+    e?.message ||
+    e?.toString() ||
+    'Xatolik yuz berdi'
+  Error(msg)
   console.error(e)
   throw e
 }
 
+// "1,2, 3" -> [1,2,3]
+function normalizeVisibility(input) {
+  if (Array.isArray(input)) {
+    return input
+      .map((x) => (x === 0 ? 0 : parseInt(x, 10)))
+      .filter((n) => Number.isInteger(n) && n >= 0)
+  }
+  if (typeof input === 'string') {
+    return input
+      .split(/[,\s]+/)
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .map((x) => (x === '0' ? 0 : parseInt(x, 10)))
+      .filter((n) => Number.isInteger(n) && n >= 0)
+  }
+  return []
+}
+
 export const fetchContent = async (contentId) => {
   try {
+    if (!contentId) {
+      // Backendda child majburiy, shuning uchun bu yerda faqat bo‘sh obyekt qaytaramiz
+      return {
+        title: '',
+        description: '',
+        video: '',
+        file: '',
+        visibility: [],
+        child: null,
+      }
+    }
     const { data } = await axiosInstance.get(`content/${contentId}`)
     return data
   } catch (e) {
-    if (e.response?.status === 404) {
-      const newContent = await axiosInstance.post('content', {
-        title: '',
-        description: '',
-      })
-      return newContent.data
-    }
     handleError(e)
   }
 }
+
 export const fetchData = async (url, setter) => {
   try {
     const { data } = await axiosInstance.get(url)
@@ -38,8 +71,11 @@ export const saveCategory = async (isEditing, category) => {
   try {
     const method = isEditing ? 'put' : 'post'
     const url = isEditing ? `category/${category._id}` : 'category'
-
-    const res = await axiosInstance[method](url, category)
+    const payload = {
+      ...category,
+      visibility: normalizeVisibility(category.visibility),
+    }
+    const res = await axiosInstance[method](url, payload)
     handleSuccess(
       isEditing
         ? 'Kategoriya muvaffaqiyatli yangilandi'
@@ -74,8 +110,11 @@ export const saveChild = async (isEditing, childData, categoryId) => {
   try {
     const method = isEditing ? 'put' : 'post'
     const url = isEditing ? `child/${childData._id}` : `child/${categoryId}`
-
-    const { data } = await axiosInstance[method](url, childData)
+    const payload = {
+      ...childData,
+      visibility: normalizeVisibility(childData.visibility),
+    }
+    const { data } = await axiosInstance[method](url, payload)
     handleSuccess(
       isEditing
         ? 'Child muvaffaqiyatli yangilandi'
@@ -99,11 +138,12 @@ export const deleteChild = async (childId) => {
 export const saveContent = async (isEditing, contentData) => {
   try {
     const method = isEditing ? 'put' : 'post'
-    const url = isEditing
-      ? `content/${contentData._id}`
-      : 'content/' + contentData
-
-    const { data } = await axiosInstance[method](url, contentData)
+    const url = isEditing ? `content/${contentData._id}` : 'content'
+    const payload = {
+      ...contentData,
+      visibility: normalizeVisibility(contentData.visibility),
+    }
+    const { data } = await axiosInstance[method](url, payload)
     handleSuccess(
       isEditing
         ? 'Content muvaffaqiyatli yangilandi'
@@ -131,8 +171,3 @@ export const uploadFile = async (file) => {
     handleError(e)
   }
 }
-
-export const Success = (message) => toast.success(message)
-export const Warning = (message) => toast.warning(message)
-export const Info = (message) => toast.info(message)
-export const Error = (e) => toast.error(e)

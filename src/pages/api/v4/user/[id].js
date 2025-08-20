@@ -37,7 +37,9 @@ async function handler(req, res) {
 
         // normalize login
         if (updateFields.login) {
-          const { isValid, normalized, error } = validateLogin(updateFields.login)
+          const { isValid, normalized, error } = validateLogin(
+            updateFields.login
+          )
           if (!isValid) {
             return res.status(400).json({ message: error })
           }
@@ -56,7 +58,9 @@ async function handler(req, res) {
 
         // telegram username normalize
         if (updateFields.telegramUsername) {
-          const normalized = normalizeTelegramUsername(updateFields.telegramUsername)
+          const normalized = normalizeTelegramUsername(
+            updateFields.telegramUsername
+          )
           updateFields.telegramUsername = normalized || undefined
         }
 
@@ -68,7 +72,9 @@ async function handler(req, res) {
         // Hozirgi userni olaylik — role/group majburiyligiga aniq qaror qilish uchun
         const existing = await User.findById(id).select('role group')
         if (!existing) {
-          return res.status(404).json({ message: 'Foydalanuvchi topilmadi!', success: false })
+          return res
+            .status(404)
+            .json({ message: 'Foydalanuvchi topilmadi!', success: false })
         }
 
         const nextRole = updateFields.role || existing.role
@@ -82,7 +88,9 @@ async function handler(req, res) {
                 success: false,
               })
             }
-            updateFields.curator = new mongoose.Types.ObjectId(updateFields.curator)
+            updateFields.curator = new mongoose.Types.ObjectId(
+              updateFields.curator
+            )
           } else if (req.user.role === ROLES.CURATOR) {
             updateFields.curator = req.user._id
           } else {
@@ -109,7 +117,12 @@ async function handler(req, res) {
             updateFields.group = g
           } else {
             // body'da group yo'q bo'lsa, mavjud qiymatga tayanamiz
-            if (!(existing.group === 0 || (typeof existing.group === 'number' && existing.group > 0))) {
+            if (
+              !(
+                existing.group === 0 ||
+                (typeof existing.group === 'number' && existing.group > 0)
+              )
+            ) {
               return res.status(400).json({
                 message: 'Bu rol uchun group majburiy',
                 success: false,

@@ -18,13 +18,24 @@ async function handler(req, res) {
       const { group, userIds, onlyWithoutGroup = false } = req.body
 
       // Tekshiruvlar
-      if (group === undefined || group === null || Number.isNaN(Number(group))) {
-        return res.status(400).json({ message: 'group raqam bo‘lishi kerak (0 yoki 1...)', success: false })
+      if (
+        group === undefined ||
+        group === null ||
+        Number.isNaN(Number(group))
+      ) {
+        return res
+          .status(400)
+          .json({
+            message: 'group raqam bo‘lishi kerak (0 yoki 1...)',
+            success: false,
+          })
       }
       const groupNum = Number(group)
 
       // Faqat oddiy foydalanuvchilar uchun
-      const query = { role: { $in: [ROLES.STANDARD, ROLES.VIP, ROLES.PREMIUM] } }
+      const query = {
+        role: { $in: [ROLES.STANDARD, ROLES.VIP, ROLES.PREMIUM] },
+      }
 
       // CURATOR faqat o‘z userlariga o‘zgartirish qilsin
       if (req.user.role === ROLES.CURATOR) {
@@ -33,9 +44,13 @@ async function handler(req, res) {
 
       // Agar tanlangan userlar bo‘lsa – faqat o‘shalar
       if (Array.isArray(userIds) && userIds.length) {
-        const validIds = userIds.filter(id => mongoose.Types.ObjectId.isValid(id)).map(id => new mongoose.Types.ObjectId(id))
+        const validIds = userIds
+          .filter((id) => mongoose.Types.ObjectId.isValid(id))
+          .map((id) => new mongoose.Types.ObjectId(id))
         if (validIds.length === 0) {
-          return res.status(400).json({ message: 'userIds bo‘sh yoki noto‘g‘ri', success: false })
+          return res
+            .status(400)
+            .json({ message: 'userIds bo‘sh yoki noto‘g‘ri', success: false })
         }
         query._id = { $in: validIds }
       }
@@ -53,7 +68,9 @@ async function handler(req, res) {
       })
     } catch (e) {
       console.error('bulk-group error:', e)
-      return res.status(500).json({ success: false, message: e.message || 'Server xatoligi' })
+      return res
+        .status(500)
+        .json({ success: false, message: e.message || 'Server xatoligi' })
     }
   })
 }

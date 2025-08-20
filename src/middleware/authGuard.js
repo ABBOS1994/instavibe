@@ -1,4 +1,3 @@
-// middleware/authGuard.js
 import jwt from 'jsonwebtoken'
 import dbConnect from '../config/db'
 import User from '../models/User'
@@ -66,18 +65,12 @@ export function authGuard(allowedRoles = null) {
           .json({ message: 'Sizda bu sahifaga ruxsat yo‘q!', success: false })
       }
 
-      // group ni ham sessiyaga qo'yamiz
-      const groupValue =
-        (user.group === 0 || (typeof user.group === 'number' && user.group > 0))
-          ? Number(user.group)
-          : null
-
       req.user = {
         _id: user._id,
         login: user.login,
         role: user.role,
         accessUntil: user.accessUntil,
-        group: groupValue,
+        group: typeof user.group === 'number' ? user.group : null,
       }
 
       return next()

@@ -8,12 +8,14 @@ const schema = new mongoose.Schema(
     isActive: { type: Boolean, required: true, default: true },
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-    sort: { type: Number, required: false, default: 0, increment: true },
+    sort: { type: Number, default: 0 },
   },
   { timestamps: true }
 )
 
 schema.index({ visibility: 1 })
+schema.index({ isActive: 1, sort: 1 })
+
 const Category =
   mongoose?.models?.Category || mongoose?.model('Category', schema)
 

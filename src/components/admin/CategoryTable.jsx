@@ -1,4 +1,4 @@
-//src/components/admins/CategoryTable
+// src/components/admin/CategoryTable.jsx
 import React from 'react'
 import { Table, Button } from 'react-bootstrap'
 import CategoryRow from './CategoryRow'
@@ -15,12 +15,14 @@ export default function CategoryTable({
   handleChildDelete,
 }) {
   return (
-    <Table striped bordered hover>
+    <Table striped bordered hover responsive>
       <thead>
         <tr>
           <th>Sort</th>
           <th>Title</th>
           <th>Description</th>
+          <th>Groups</th>
+          {/* visibility column */}
           <th>Active</th>
           <th>
             <Button variant="primary" onClick={() => handleShow()}>

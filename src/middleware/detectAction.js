@@ -13,7 +13,7 @@ export default function detectAction(req) {
   }
 
   const rules = [
-    { base: '/login', map: { POST: 'login_attempt' } },
+    { base: '/auth/login', map: { POST: 'login_attempt' } },
     { base: '/logout', map: { GET: 'logout' } },
     { base: '/register', map: { POST: 'register' } },
     {

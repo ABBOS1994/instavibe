@@ -1,13 +1,13 @@
-// src/pages/api/v4/login.js
+// src/pages/api/v4/auth/login.js
 
-import User from '../../../models/User'
+import User from '../../../../models/User'
 import jwt from 'jsonwebtoken'
-import withLogging from '../../../middleware/logMiddleware'
+import withLogging from '../../../../middleware/logMiddleware'
 import {
   isBlocked,
   increaseAttempt,
   resetAttempts,
-} from '../../../middleware/loginRateLimiter'
+} from '../../../../middleware/loginRateLimiter'
 
 function normalize(str = '') {
   return str.replace(/\s+/g, '').toLowerCase()

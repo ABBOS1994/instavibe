@@ -7,7 +7,6 @@ const schema = new mongoose.Schema(
       ref: 'Category',
       required: true,
     },
-    visibility: { type: [Number], default: [] },
     title: { type: String, required: true },
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },

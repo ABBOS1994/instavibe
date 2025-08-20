@@ -8,7 +8,6 @@ const schema = new mongoose.Schema(
     description: { type: String, required: true },
     video: { type: String, required: false },
     file: { type: String, required: false },
-    visibility: { type: [Number], default: [] },
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   },

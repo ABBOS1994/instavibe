@@ -86,11 +86,22 @@ export default function Content() {
     setExpandedCategory(categoryId)
   }
 
-  const handleShowContent = async (contentId) => {
-    setIsEditingContent(!!contentId)
-    const res = await fetchContent(contentId)
-    setCurrentContent(res)
-    setShowContentModal(true)
+  const handleShowContent = async (contentOrChildId) => {
+    try {
+      let res
+      if (/^[a-f\d]{24}$/i.test(contentOrChildId)) {
+        res = await fetchContent(null)
+        res.child = contentOrChildId
+      } else {
+        res = await fetchContent(contentOrChildId)
+      }
+
+      setIsEditingContent(!!res._id)
+      setCurrentContent(res)
+      setShowContentModal(true)
+    } catch (e) {
+      Error('Contentni yuklashda xato')
+    }
   }
 
   const handleShowChildModal = (child) => {

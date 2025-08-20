@@ -1,5 +1,5 @@
 // pages/cabinet/index.jsx
-
+import React, { useEffect, useState } from 'react'
 import Layout from '../../Layout'
 import PrivateRoute from '../../components/PrivateRoute'
 import BannerLayout from '../../Layout/BannerLayout'
@@ -12,8 +12,32 @@ import dbConnect from '../../config/db'
 import BannerModel from '../../models/Banner'
 import LinkModel from '../../models/Link'
 import CategoryModel from '../../models/Category'
+import axiosInstance from '../../config/axiosConfig'
 
-export default function CabinetPage({ banners, links, modules }) {
+export default function CabinetPage({
+  banners,
+  links,
+  modules,
+  initialUserGroup,
+}) {
+  const [userGroup, setUserGroup] = useState(
+    typeof initialUserGroup === 'number' ? initialUserGroup : null
+  )
+
+  useEffect(() => {
+    if (userGroup === null) {
+      axiosInstance
+        .get('auth/me')
+        .then((res) => {
+          const g = res?.data?.group
+          if (g === 0 || Number.isInteger(Number(g))) {
+            setUserGroup(Number(g))
+          }
+        })
+        .catch(() => {})
+    }
+  }, [userGroup])
+
   return (
     <PrivateRoute>
       <Layout>
@@ -21,7 +45,7 @@ export default function CabinetPage({ banners, links, modules }) {
         <ScrollingText />
         <BannerLayout data={banners} />
         <Link data={links} />
-        <Module data={modules} />
+        <Module data={modules} userGroup={userGroup} />
       </Layout>
     </PrivateRoute>
   )
@@ -46,6 +70,7 @@ export async function getServerSideProps() {
         banners: JSON.parse(JSON.stringify(bannersRaw)),
         links: JSON.parse(JSON.stringify(linksRaw)),
         modules: JSON.parse(JSON.stringify(modulesRaw)),
+        initialUserGroup: null,
       },
     }
   } catch (err) {
@@ -55,6 +80,7 @@ export async function getServerSideProps() {
         banners: [],
         links: [],
         modules: [],
+        initialUserGroup: null,
       },
     }
   }

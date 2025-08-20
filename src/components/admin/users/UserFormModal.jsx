@@ -3,15 +3,15 @@ import { Button, Col, Form, Modal, Row } from 'react-bootstrap'
 import { ROLES } from '../../../constants/roles'
 
 export default function UserFormModal({
-                                        show,
-                                        onHide,
-                                        formData,
-                                        setFormData,
-                                        onSubmit,
-                                        curators = [],
-                                        editingId,
-                                        groups = [], // mavjud guruhlar (sonlar)
-                                      }) {
+  show,
+  onHide,
+  formData,
+  setFormData,
+  onSubmit,
+  curators = [],
+  editingId,
+  groups = [], // mavjud guruhlar (sonlar)
+}) {
   const ROLES_ARRAY = Array.isArray(ROLES) ? ROLES : Object.values(ROLES)
   const isAdminOrCurator =
     formData.role === ROLES.ADMIN || formData.role === ROLES.CURATOR
@@ -76,7 +76,10 @@ export default function UserFormModal({
         setFormData((prev) => ({ ...prev, curator: curators[0]._id }))
       }
       if (!(formData.group === 0 || typeof formData.group === 'number')) {
-        setFormData((prev) => ({ ...prev, group: groups.length > 0 ? groups[0] : 0 }))
+        setFormData((prev) => ({
+          ...prev,
+          group: groups.length > 0 ? groups[0] : 0,
+        }))
       }
     } else {
       // admin/curator bo'lsa — group null bo'lsin
@@ -84,7 +87,15 @@ export default function UserFormModal({
         setFormData((prev) => ({ ...prev, group: null }))
       }
     }
-  }, [show, isAdminOrCurator, curators, groups, formData.curator, formData.group, setFormData])
+  }, [
+    show,
+    isAdminOrCurator,
+    curators,
+    groups,
+    formData.curator,
+    formData.group,
+    setFormData,
+  ])
 
   return (
     <Modal show={show} onHide={onHide} centered size="lg">
