@@ -82,7 +82,10 @@ export default function UserPage() {
   const [pushMessage, setPushMessage] = useState('')
   const [sending, setSending] = useState(false)
 
-  // filters / sort / pagination
+  // viewer (current user) info
+  const [viewerId, setViewerId] = useState(null)
+  const [viewerRole, setViewerRole] = useState(null)
+
   const [search, setSearch] = useState('')
   const [limit, setLimit] = useState(10)
   const [page, setPage] = useState(1)
@@ -91,21 +94,53 @@ export default function UserPage() {
   const [statusFilter, setStatusFilter] = useState('')
   const [roleFilter, setRoleFilter] = useState('')
   const [curatorFilter, setCuratorFilter] = useState('')
-  const [groupFilter, setGroupFilter] = useState('') // <-- faqat table uchun
+  const [groupFilter, setGroupFilter] = useState('')
 
-  // selection
   const [selectedAll, setSelectedAll] = useState(false)
   const [selectedIds, setSelectedIds] = useState([])
   const [excludedIds, setExcludedIds] = useState([])
   const headerChkRef = useRef(null)
 
+  // 1) joriy userni localStorage / token-dan o‘qish
   useEffect(() => {
-    fetchUsers()
+    try {
+      const uStr = localStorage.getItem('User')
+      if (uStr) {
+        const u = JSON.parse(uStr)
+        const id = u?._id || u?.id || null
+        const roleRaw =
+          typeof u?.role === 'string'
+            ? u.role
+            : u?.role?._id || u?.role?.name || u?.role?.code
+        setViewerId(id)
+        setViewerRole(roleRaw ? String(roleRaw).toLowerCase() : null)
+        return
+      }
+      const t = localStorage.getItem('Token')
+      if (t) {
+        const payload = JSON.parse(atob(t.split('.')[1]))
+        const id = payload?._id || payload?.userId || payload?.id || null
+        const roleRaw =
+          typeof payload?.role === 'string'
+            ? payload.role
+            : payload?.role?._id || payload?.role?.name || payload?.role?.code
+        setViewerId(id)
+        setViewerRole(roleRaw ? String(roleRaw).toLowerCase() : null)
+      }
+    } catch (e) {
+      console.warn('Viewer parse error', e)
+    }
   }, [])
 
+  // 2) foydalanuvchilarni olish (faqat curator bo‘lsa query yuboramiz)
   const fetchUsers = async () => {
+    setLoading(true)
     try {
-      const res = await axiosInstance.get('user')
+      const params = {}
+      if (viewerRole === ROLES.CURATOR && viewerId) {
+        params.curator = viewerId // faqat shu!
+      }
+      const res = await axiosInstance.get('user', { params })
       const list = res.data?.users || res.data || []
       const safeList = Array.isArray(list) ? list : []
       const normalized = safeList.map((u) => normalizeUser(u, ROLES))
@@ -117,17 +152,38 @@ export default function UserPage() {
     }
   }
 
-  // curatorlar
+  // 3) faqat viewer tayyor bo‘lganda fetch qilamiz
   useEffect(() => {
-    const onlyCurators = allUsers.filter(
-      (u) =>
-        (u.role || '').toLowerCase() ===
-        (ROLES.CURATOR || 'curator').toLowerCase()
-    )
-    setCurators(onlyCurators)
-  }, [allUsers])
+    if (!viewerRole) return
+    fetchUsers()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [viewerRole, viewerId])
 
-  // mavjud guruhlar (unique sonlar)
+  // 4) kuratorlar ro‘yxati:
+  useEffect(() => {
+    if (viewerRole === ROLES.CURATOR && viewerId) {
+      let firstName = ''
+      let login = ''
+      try {
+        const uStr = localStorage.getItem('User')
+        if (uStr) {
+          const u = JSON.parse(uStr)
+          firstName = u?.firstName || ''
+          login = u?.login || ''
+        }
+      } catch {}
+      setCurators([{ _id: viewerId, firstName, login, role: ROLES.CURATOR }])
+    } else {
+      const onlyCurators = allUsers.filter(
+        (u) =>
+          (u.role || '').toLowerCase() ===
+          (ROLES.CURATOR || 'curator').toLowerCase()
+      )
+      setCurators(onlyCurators)
+    }
+  }, [viewerRole, viewerId, allUsers])
+
+  // group select uchun
   const groupOptions = useMemo(() => {
     const setNums = new Set()
     allUsers.forEach((u) => {
@@ -138,7 +194,7 @@ export default function UserPage() {
     return Array.from(setNums).sort((a, b) => a - b)
   }, [allUsers])
 
-  // filterlar
+  // local filter/sort/pagination (hammasi client-side)
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
     return allUsers.filter((u) => {
@@ -149,12 +205,17 @@ export default function UserPage() {
         (u.role || '').toLowerCase() !== roleFilter.toLowerCase()
       )
         return false
-      if (curatorFilter && u.curator !== curatorFilter) return false
+      // curator bo‘lsa server allaqachon filtrlagan — admin uchun esa lokal filtr ishlaydi
+      if (
+        curatorFilter &&
+        viewerRole !== ROLES.CURATOR &&
+        u.curator !== curatorFilter
+      )
+        return false
       if (groupFilter !== '') {
         const gf = Number(groupFilter)
         if (!(u.group === gf)) return false
       }
-
       if (!q) return true
       const text = [
         u.login,
@@ -168,9 +229,16 @@ export default function UserPage() {
         .toLowerCase()
       return text.includes(q)
     })
-  }, [allUsers, search, statusFilter, roleFilter, curatorFilter, groupFilter])
+  }, [
+    allUsers,
+    search,
+    statusFilter,
+    roleFilter,
+    curatorFilter,
+    groupFilter,
+    viewerRole,
+  ])
 
-  // sort
   const sorted = useMemo(() => {
     const arr = [...filtered]
     arr.sort((a, b) => {
@@ -183,7 +251,6 @@ export default function UserPage() {
     return arr
   }, [filtered, sortBy, sortOrder])
 
-  // pagination
   const totalPages = Math.max(1, Math.ceil(sorted.length / limit))
   const safePage = Math.min(page, totalPages)
   const pageUsers = useMemo(() => {
@@ -194,7 +261,6 @@ export default function UserPage() {
     if (safePage !== page) setPage(safePage)
   }, [safePage, page])
 
-  // header checkbox indeterminate
   const totalSelectedCount = selectedAll
     ? Math.max(0, filtered.length - excludedIds.length)
     : selectedIds.length
@@ -219,7 +285,6 @@ export default function UserPage() {
     return curator?.firstName || curator?.login || ''
   }
 
-  // selection
   const toggleRow = (id) => {
     if (selectedAll) {
       setExcludedIds((prev) =>
@@ -243,7 +308,6 @@ export default function UserPage() {
     }
   }
 
-  // edit/delete/submit
   const handleEdit = (user) => {
     setFormData({
       ...defaultUser,
@@ -285,7 +349,6 @@ export default function UserPage() {
       delete cleanData.telegramUsername
     }
 
-    // group: admin/curator => null, boshqalar => int >=0 majburiy
     const isAdminOrCur =
       cleanData.role === ROLES.ADMIN || cleanData.role === ROLES.CURATOR
     if (isAdminOrCur) {
@@ -314,6 +377,9 @@ export default function UserPage() {
         )
         Success('Foydalanuvchi yangilandi')
       } else {
+        if (viewerRole === ROLES.CURATOR && viewerId) {
+          cleanData.curator = viewerId // curator faqat o‘ziga yozadi
+        }
         const res = await axiosInstance.post('user', cleanData)
         const createdRaw = extractUserFromResponse(res)
         const createdUser = normalizeUser(createdRaw, ROLES)
@@ -405,11 +471,9 @@ export default function UserPage() {
   return (
     <AdminLayout className="p-3">
       <FiltersBar
-        // pagination (top)
         page={safePage}
         totalPages={totalPages}
         setPage={setPage}
-        // search / limit
         search={search}
         setSearch={(v) => {
           setSearch(v)
@@ -420,12 +484,13 @@ export default function UserPage() {
           setLimit(n)
           setPage(1)
         }}
-        // actions
         onAdd={() => {
           const initialForm = { ...defaultUser }
-          // default role STANDARD: groupni ham qo'yamiz
           initialForm.group = groupOptions[0] ?? 0
-          if (
+
+          if (viewerRole === ROLES.CURATOR && viewerId) {
+            initialForm.curator = viewerId
+          } else if (
             initialForm.role !== ROLES.ADMIN &&
             initialForm.role !== ROLES.CURATOR &&
             !initialForm.curator &&
@@ -433,6 +498,7 @@ export default function UserPage() {
           ) {
             initialForm.curator = curators[0]._id
           }
+
           setFormData(initialForm)
           setEditingId(null)
           setShowFormModal(true)
@@ -445,7 +511,6 @@ export default function UserPage() {
       <UsersTable
         loading={loading}
         users={pageUsers}
-        // sorting / filters (table header selects)
         sortBy={sortBy}
         sortOrder={sortOrder}
         toggleSort={toggleSort}
@@ -464,7 +529,6 @@ export default function UserPage() {
           setStatusFilter(v)
           setPage(1)
         }}
-        // group filter — faqat table ichida
         groupFilter={groupFilter}
         setGroupFilter={(v) => {
           setGroupFilter(v)
@@ -474,7 +538,6 @@ export default function UserPage() {
         curators={curators}
         roles={Object.values(ROLES)}
         getCuratorName={getCuratorName}
-        // selection
         selectedAll={selectedAll}
         selectedIds={selectedIds}
         excludedIds={excludedIds}
@@ -482,7 +545,6 @@ export default function UserPage() {
         toggleSelectAllHeader={toggleSelectAllHeader}
         headerChkRef={headerChkRef}
         allSelected={allSelected}
-        // actions
         onEdit={handleEdit}
         onDelete={handleDelete}
         onOpenLog={setLogModalUser}

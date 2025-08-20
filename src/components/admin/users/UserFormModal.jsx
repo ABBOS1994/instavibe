@@ -10,11 +10,18 @@ export default function UserFormModal({
   onSubmit,
   curators = [],
   editingId,
-  groups = [], // mavjud guruhlar (sonlar)
+  groups = [],
+  viewerRole,
+  viewerId,
 }) {
   const ROLES_ARRAY = Array.isArray(ROLES) ? ROLES : Object.values(ROLES)
-  const isAdminOrCurator =
+
+  // Tahrirlanayotgan/yaratilayotgan USERning roli (target user)
+  const isTargetAdminOrCurator =
     formData.role === ROLES.ADMIN || formData.role === ROLES.CURATOR
+
+  // Joriy kirgan foydalanuvchi curatormi?
+  const isViewerCurator = viewerRole === ROLES.CURATOR
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target
@@ -34,31 +41,24 @@ export default function UserFormModal({
       const newRole = value
       setFormData((prev) => {
         const next = { ...prev, role: newRole }
-        // admin/curator bo'lsa — curator, group yashirin/bo'sh
+        // Target user admin/curator bo‘lsa — curator maydonini tozalaymiz
         if (newRole === ROLES.ADMIN || newRole === ROLES.CURATOR) {
           next.curator = ''
           next.group = null
         } else {
-          // oddiy role — default curator va group qo'yamiz
-          if (!prev.curator && curators.length > 0) {
+          // oddiy foydalanuvchi bo‘lsa
+          // agar viewer curator bo‘lsa — majburan viewerId ni qo‘yamiz
+          if (isViewerCurator) {
+            next.curator = viewerId || ''
+          } else if (!prev.curator && curators.length > 0) {
             next.curator = curators[0]._id
           }
-          if (!(prev.group === 0 || typeof prev.group === 'number')) {
-            next.group = groups.length > 0 ? groups[0] : 0
+          if (next.group === null || next.group === undefined) {
+            next.group = 0
           }
         }
         return next
       })
-      return
-    }
-
-    if (name === 'group') {
-      // number sifatida saqlaymiz
-      const n = value === '' ? '' : parseInt(value, 10)
-      setFormData((prev) => ({
-        ...prev,
-        group: Number.isInteger(n) ? n : prev.group,
-      }))
       return
     }
 
@@ -70,32 +70,15 @@ export default function UserFormModal({
 
   useEffect(() => {
     if (!show) return
-    // oddiy role bo'lsa — default curator/group to'ldirib qo'yamiz
-    if (!isAdminOrCurator) {
-      if (!formData.curator && curators.length > 0) {
-        setFormData((prev) => ({ ...prev, curator: curators[0]._id }))
-      }
-      if (!(formData.group === 0 || typeof formData.group === 'number')) {
-        setFormData((prev) => ({
-          ...prev,
-          group: groups.length > 0 ? groups[0] : 0,
-        }))
-      }
-    } else {
-      // admin/curator bo'lsa — group null bo'lsin
-      if (formData.group !== null) {
-        setFormData((prev) => ({ ...prev, group: null }))
-      }
+    // Modal ochilganda, agar target user oddiy bo‘lsa va viewer curator bo‘lsa — kuratorni viewerga o‘rnatamiz
+    if (!isTargetAdminOrCurator) {
+      setFormData((prev) => ({
+        ...prev,
+        curator: isViewerCurator ? viewerId || prev.curator : prev.curator,
+        group: prev.group === null || prev.group === undefined ? 0 : prev.group,
+      }))
     }
-  }, [
-    show,
-    isAdminOrCurator,
-    curators,
-    groups,
-    formData.curator,
-    formData.group,
-    setFormData,
-  ])
+  }, [show, isTargetAdminOrCurator, isViewerCurator, viewerId, setFormData])
 
   return (
     <Modal show={show} onHide={onHide} centered size="lg">
@@ -192,55 +175,76 @@ export default function UserFormModal({
               </Form.Select>
             </Col>
 
-            {/* Admin/Curator bo'lmaganda kurator & group ko'rsatiladi */}
-            {!isAdminOrCurator && (
-              <>
-                <Col>
-                  <Form.Label column={'lg'}>Kurator</Form.Label>
-                  <Form.Select
-                    name="curator"
-                    value={formData.curator || curators[0]?._id || ''}
-                    onChange={handleChange}
-                    required
-                  >
-                    {curators.length === 0 ? (
-                      <option value="">(Kurator yo‘q)</option>
-                    ) : (
-                      curators.map((c) => (
-                        <option key={c._id} value={c._id}>
-                          {c.firstName || c.login}
-                        </option>
-                      ))
-                    )}
-                  </Form.Select>
-                </Col>
+            {/* Kurator maydoni:
+                - Target user admin/curator bo‘lsa: umuman ko‘rsatilmaydi
+                - Target user oddiy bo‘lsa:
+                   * Viewer CURATOR bo‘lsa — selectni ko‘rsatmaymiz, avtomatik viewerId
+                   * Viewer ADMIN bo‘lsa — select ko‘rsatiladi */}
+            {!isTargetAdminOrCurator && !isViewerCurator && (
+              <Col>
+                <Form.Label column={'lg'}>Kurator</Form.Label>
+                <Form.Select
+                  name="curator"
+                  value={formData.curator || curators[0]?._id || ''}
+                  onChange={handleChange}
+                  required
+                >
+                  {curators.length === 0 ? (
+                    <option value="">(Kurator yo‘q)</option>
+                  ) : (
+                    curators.map((c) => (
+                      <option key={c._id} value={c._id}>
+                        {c.firstName || c.login}
+                      </option>
+                    ))
+                  )}
+                </Form.Select>
+              </Col>
+            )}
 
-                <Col>
-                  <Form.Label column={'lg'}>Guruh (0,1,2,...)</Form.Label>
-                  <Form.Control
-                    name="group"
-                    type="number"
-                    min={0}
-                    step={1}
-                    value={
-                      formData.group === 0 || typeof formData.group === 'number'
-                        ? formData.group
-                        : ''
-                    }
-                    onChange={handleChange}
-                    required
-                    list="groupOptions"
-                    placeholder="masalan: 0"
-                  />
-                  <datalist id="groupOptions">
-                    {groups.map((g) => (
-                      <option key={g} value={g} />
-                    ))}
-                  </datalist>
-                </Col>
-              </>
+            {!isTargetAdminOrCurator && isViewerCurator && (
+              <Col>
+                <Form.Label column={'lg'}>Kurator</Form.Label>
+                <Form.Control value="(O'zingiz)" disabled readOnly />
+                {/* qiymat serverga borishi uchun hidden input */}
+                <input type="hidden" name="curator" value={viewerId || ''} />
+              </Col>
             )}
           </Row>
+
+          {/* Oddiy userlar uchun group tanlovi (0/1/2...) */}
+          {!isTargetAdminOrCurator && (
+            <Row className="mb-2">
+              <Col>
+                <Form.Label column={'lg'}>Guruh</Form.Label>
+                <Form.Select
+                  name="group"
+                  value={
+                    formData.group === 0
+                      ? 0
+                      : (formData.group ?? groups?.[0] ?? 0)
+                  }
+                  onChange={handleChange}
+                  required
+                >
+                  {/* mavjudlar ro‘yxati */}
+                  {Array.isArray(groups) && groups.length > 0 ? (
+                    groups.map((g) => (
+                      <option key={g} value={g}>
+                        {g}
+                      </option>
+                    ))
+                  ) : (
+                    <>
+                      <option value={0}>0</option>
+                      <option value={1}>1</option>
+                      <option value={2}>2</option>
+                    </>
+                  )}
+                </Form.Select>
+              </Col>
+            </Row>
+          )}
 
           <Row className="mb-2">
             <Col>

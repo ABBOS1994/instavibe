@@ -6,6 +6,13 @@ import { Form, InputGroup } from 'react-bootstrap'
 import { Turnstile } from '@marsidev/react-turnstile'
 import axiosInstance, { setAuthToken } from '../../../config/axiosConfig'
 import { Info, Error, Success } from '../../admin/Service'
+import { ROLES } from '../../../constants/roles'
+
+function normalizeRole(role) {
+  if (!role) return ''
+  const r = typeof role === 'string' ? role : role.name
+  return String(r).toLowerCase()
+}
 
 const LoginForm = () => {
   const { push } = useRouter()
@@ -35,7 +42,13 @@ const LoginForm = () => {
       setAuthToken(token)
 
       Success(message || 'Tizimga muvaffaqiyatli kirildi')
-      push('/cabinet')
+
+      const roleStr = normalizeRole(user?.role)
+      if (roleStr === ROLES.ADMIN || roleStr === ROLES.CURATOR) {
+        push('/admin')
+      } else {
+        push('/cabinet')
+      }
     } catch (err) {
       const msg =
         err?.response?.data?.message ||

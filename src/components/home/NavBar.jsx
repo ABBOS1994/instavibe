@@ -1,4 +1,3 @@
-// src/components/layout/NavBar.jsx
 import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -8,14 +7,36 @@ import LoginModal from './Login/LoginModal'
 import { format } from 'date-fns'
 import { uz } from 'date-fns/locale'
 import { Info, Warning } from '../admin/Service'
+import { ROLES } from '../../constants/roles'
+
+function safeDecodeJwt(token) {
+  try {
+    const base = token.split('.')[1]
+    const b64 = base.replace(/-/g, '+').replace(/_/g, '/')
+    const json = decodeURIComponent(
+      atob(b64)
+        .split('')
+        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+        .join('')
+    )
+    return JSON.parse(json)
+  } catch {
+    return null
+  }
+}
 
 export default function NavBar() {
   const router = useRouter()
 
   const [showModal, setShowModal] = useState(false)
   const [token, setToken] = useState(null)
-  const [isAdmin, setIsAdmin] = useState(false)
+  const [role, setRole] = useState(null) // 'admin' | 'curator' | ...
   const [accessLeft, setAccessLeft] = useState('')
+
+  const isAdmin = role === ROLES.ADMIN
+  const isCurator = role === ROLES.CURATOR
+  const showAdminPanel = isAdmin || isCurator
+  const showCabinet = !!token && !isCurator // curator uchun yashiramiz
 
   const handleModal = () => setShowModal((prev) => !prev)
 
@@ -23,7 +44,7 @@ export default function NavBar() {
     localStorage.removeItem('Token')
     localStorage.removeItem('User')
     setToken(null)
-    setIsAdmin(false)
+    setRole(null)
     setAccessLeft('')
     Info('Sizni yana kutamiz!')
     setShowModal(false)
@@ -36,37 +57,33 @@ export default function NavBar() {
 
     if (storedToken && storedUser) {
       setToken(storedToken)
-
-      try {
-        const decodedToken = JSON.parse(atob(storedToken.split('.')[1]))
-        const accessUntil = decodedToken.accessUntil
-        const roleId = decodedToken.role?._id || decodedToken.role
-
-        if (accessUntil) {
-          const untilDate = new Date(accessUntil)
-          const now = new Date()
-
-          if (untilDate < now) {
-            handleLogout()
-            Warning('Kirish muddati tugagan!')
-          } else {
-            const formattedDate = format(untilDate, 'dd MMMM yyyy', {
-              locale: uz,
-            })
-            setAccessLeft(`${formattedDate} gacha`)
-          }
-        }
-
-        if (
-          roleId &&
-          (roleId === 'admin' || decodedToken.role?.name === 'admin')
-        ) {
-          setIsAdmin(true)
-        }
-      } catch (err) {
-        console.error('Token decoding error:', err)
+      const decodedToken = safeDecodeJwt(storedToken)
+      if (!decodedToken) {
         handleLogout()
+        return
       }
+
+      const accessUntil = decodedToken.accessUntil
+      const roleValue =
+        decodedToken.role?.name || decodedToken.role?._id || decodedToken.role
+
+      if (accessUntil) {
+        const untilDate = new Date(accessUntil)
+        const now = new Date()
+
+        if (untilDate < now) {
+          handleLogout()
+          Warning('Kirish muddati tugagan!')
+          return
+        } else {
+          const formattedDate = format(untilDate, 'dd MMMM yyyy', {
+            locale: uz,
+          })
+          setAccessLeft(`${formattedDate} gacha`)
+        }
+      }
+
+      if (roleValue) setRole(String(roleValue).toLowerCase())
     }
   }, [router])
 
@@ -91,7 +108,7 @@ export default function NavBar() {
         <Navbar.Toggle />
         <Navbar.Collapse>
           <Nav className="ms-auto">
-            {isAdmin && (
+            {showAdminPanel && (
               <NavLink
                 href="/admin"
                 active={router.pathname.startsWith('/admin')}
@@ -100,12 +117,11 @@ export default function NavBar() {
               </NavLink>
             )}
 
-            <NavLink
-              href={token ? '/cabinet' : ''}
-              active={router.pathname === '/cabinet'}
-            >
-              {token && 'SHAXSIY KABINET'}
-            </NavLink>
+            {showCabinet && (
+              <NavLink href="/cabinet" active={router.pathname === '/cabinet'}>
+                SHAXSIY KABINET
+              </NavLink>
+            )}
 
             <button
               className={token ? 'activeBtn' : 'brandBtn'}

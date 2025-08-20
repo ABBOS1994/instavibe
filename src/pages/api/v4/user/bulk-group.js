@@ -23,12 +23,10 @@ async function handler(req, res) {
         group === null ||
         Number.isNaN(Number(group))
       ) {
-        return res
-          .status(400)
-          .json({
-            message: 'group raqam bo‘lishi kerak (0 yoki 1...)',
-            success: false,
-          })
+        return res.status(400).json({
+          message: 'group raqam bo‘lishi kerak (0 yoki 1...)',
+          success: false,
+        })
       }
       const groupNum = Number(group)
 
