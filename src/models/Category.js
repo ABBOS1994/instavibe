@@ -4,6 +4,7 @@ const schema = new mongoose.Schema(
   {
     title: { type: String, required: true },
     description: { type: String, required: true },
+    visibility: { type: [Number], default: [] },
     isActive: { type: Boolean, required: true, default: true },
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
@@ -12,6 +13,7 @@ const schema = new mongoose.Schema(
   { timestamps: true }
 )
 
+schema.index({ visibility: 1 })
 const Category =
   mongoose?.models?.Category || mongoose?.model('Category', schema)
 

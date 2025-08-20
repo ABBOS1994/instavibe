@@ -1,3 +1,4 @@
+// pages/api/v4/user/export.js
 import { Parser } from 'json2csv'
 import User from '../../../../models/User'
 import withLogging from '../../../../middleware/logMiddleware'
@@ -54,6 +55,7 @@ async function handler(req, res) {
         'accessUntil',
         'isActive',
         'curator',
+        'group',
       ]
 
       const formattedUsers = users.map((u) => {
@@ -72,6 +74,10 @@ async function handler(req, res) {
             : '',
           isActive: u.isActive ? '1' : '0',
           curator: curator.firstName || curator.login || 'admin/curator',
+          group:
+            u.group === 0 || (typeof u.group === 'number' && u.group > 0)
+              ? u.group
+              : '',
         }
       })
 

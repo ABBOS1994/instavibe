@@ -1,3 +1,4 @@
+// pages/api/v4/user/import.js
 import { IncomingForm } from 'formidable'
 import fs from 'fs/promises'
 import { parse } from 'csv-parse/sync'
@@ -8,7 +9,6 @@ import { authGuard } from '../../../../middleware/authGuard'
 
 export const config = { api: { bodyParser: false } }
 
-// === Normalizatsiya / Validatsiya ===
 function normalizeLogin(login = '') {
   return login.trim().replace(/\s+/g, '')
 }
@@ -27,6 +27,12 @@ function validateLogin(login = '') {
 
 function normalizeTelegramUsername(username = '') {
   return username.replace(/^@/, '').toLowerCase()
+}
+
+const parseGroup = (val) => {
+  if (val === null || val === undefined || val === '') return null
+  const n = Number(val)
+  return Number.isInteger(n) && n >= 0 ? n : null
 }
 
 async function handler(req, res) {
@@ -88,6 +94,7 @@ async function handler(req, res) {
           firstName,
           lastName,
           isActive,
+          group,
         } = row
 
         const {
@@ -124,7 +131,6 @@ async function handler(req, res) {
           continue
         }
 
-        // Kurator topish
         let curatorUser = null
         if (curator) {
           curatorUser = await User.findOne({
@@ -140,7 +146,6 @@ async function handler(req, res) {
           }).select('_id')
         }
 
-        // Access muddati
         const normalizedRole = Object.values(ROLES).includes(
           (role || '').toLowerCase()
         )
@@ -163,9 +168,23 @@ async function handler(req, res) {
             ? ['1', 'true', 'active', 'aktiv'].includes(isActive.toLowerCase())
             : true
 
+        const needsGroup = [ROLES.STANDARD, ROLES.VIP, ROLES.PREMIUM].includes(
+          normalizedRole
+        )
+        const parsedGroup = parseGroup(group)
+        if (needsGroup && parsedGroup === null) {
+          errors.push({
+            line,
+            login: finalLogin,
+            reason:
+              'Group majburiy va 0 yoki undan katta butun son bo‘lishi kerak',
+          })
+          continue
+        }
+
         try {
           await User.create({
-            login: finalLogin, // Case saqlanadi
+            login: finalLogin,
             password: password.trim(),
             phone: finalPhone,
             telegramUsername: finalUsername,
@@ -175,6 +194,7 @@ async function handler(req, res) {
             firstName: firstName?.trim() || '',
             lastName: lastName?.trim() || '',
             isActive: activeFlag,
+            group: needsGroup ? parsedGroup : null,
           })
           successCount++
         } catch (e) {

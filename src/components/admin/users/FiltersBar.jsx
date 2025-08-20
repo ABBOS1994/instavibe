@@ -17,7 +17,6 @@ export default function FiltersBar({
 }) {
   return (
     <>
-      {/* Actions + filters */}
       <div className="d-flex align-items-center justify-content-end mb-3 gap-2">
         <Col>
           <InputGroup>
@@ -28,6 +27,7 @@ export default function FiltersBar({
             />
           </InputGroup>
         </Col>
+
         <Pagination className="mb-0" aria-label="Users pagination (top)">
           {Array.from({ length: totalPages }, (_, i) => (
             <Pagination.Item
@@ -55,7 +55,6 @@ export default function FiltersBar({
         <Button variant="success" onClick={onAdd}>
           ➕ Qo‘shish
         </Button>
-
         <Button variant="warning" onClick={onExport}>
           📤 Export
         </Button>

@@ -3,14 +3,15 @@ import { Button, Col, Form, Modal, Row } from 'react-bootstrap'
 import { ROLES } from '../../../constants/roles'
 
 export default function UserFormModal({
-  show,
-  onHide,
-  formData,
-  setFormData,
-  onSubmit,
-  curators = [],
-  editingId,
-}) {
+                                        show,
+                                        onHide,
+                                        formData,
+                                        setFormData,
+                                        onSubmit,
+                                        curators = [],
+                                        editingId,
+                                        groups = [], // mavjud guruhlar (sonlar)
+                                      }) {
   const ROLES_ARRAY = Array.isArray(ROLES) ? ROLES : Object.values(ROLES)
   const isAdminOrCurator =
     formData.role === ROLES.ADMIN || formData.role === ROLES.CURATOR
@@ -33,15 +34,31 @@ export default function UserFormModal({
       const newRole = value
       setFormData((prev) => {
         const next = { ...prev, role: newRole }
+        // admin/curator bo'lsa — curator, group yashirin/bo'sh
         if (newRole === ROLES.ADMIN || newRole === ROLES.CURATOR) {
           next.curator = ''
+          next.group = null
         } else {
+          // oddiy role — default curator va group qo'yamiz
           if (!prev.curator && curators.length > 0) {
             next.curator = curators[0]._id
+          }
+          if (!(prev.group === 0 || typeof prev.group === 'number')) {
+            next.group = groups.length > 0 ? groups[0] : 0
           }
         }
         return next
       })
+      return
+    }
+
+    if (name === 'group') {
+      // number sifatida saqlaymiz
+      const n = value === '' ? '' : parseInt(value, 10)
+      setFormData((prev) => ({
+        ...prev,
+        group: Number.isInteger(n) ? n : prev.group,
+      }))
       return
     }
 
@@ -53,10 +70,21 @@ export default function UserFormModal({
 
   useEffect(() => {
     if (!show) return
-    if (!isAdminOrCurator && !formData.curator && curators.length > 0) {
-      setFormData((prev) => ({ ...prev, curator: curators[0]._id }))
+    // oddiy role bo'lsa — default curator/group to'ldirib qo'yamiz
+    if (!isAdminOrCurator) {
+      if (!formData.curator && curators.length > 0) {
+        setFormData((prev) => ({ ...prev, curator: curators[0]._id }))
+      }
+      if (!(formData.group === 0 || typeof formData.group === 'number')) {
+        setFormData((prev) => ({ ...prev, group: groups.length > 0 ? groups[0] : 0 }))
+      }
+    } else {
+      // admin/curator bo'lsa — group null bo'lsin
+      if (formData.group !== null) {
+        setFormData((prev) => ({ ...prev, group: null }))
+      }
     }
-  }, [show, isAdminOrCurator, curators, formData.curator, setFormData])
+  }, [show, isAdminOrCurator, curators, groups, formData.curator, formData.group, setFormData])
 
   return (
     <Modal show={show} onHide={onHide} centered size="lg">
@@ -153,26 +181,53 @@ export default function UserFormModal({
               </Form.Select>
             </Col>
 
+            {/* Admin/Curator bo'lmaganda kurator & group ko'rsatiladi */}
             {!isAdminOrCurator && (
-              <Col>
-                <Form.Label column={'lg'}>Kurator</Form.Label>
-                <Form.Select
-                  name="curator"
-                  value={formData.curator || curators[0]?._id || ''}
-                  onChange={handleChange}
-                  required
-                >
-                  {curators.length === 0 ? (
-                    <option value="">(Kurator yo‘q)</option>
-                  ) : (
-                    curators.map((c) => (
-                      <option key={c._id} value={c._id}>
-                        {c.firstName || c.login}
-                      </option>
-                    ))
-                  )}
-                </Form.Select>
-              </Col>
+              <>
+                <Col>
+                  <Form.Label column={'lg'}>Kurator</Form.Label>
+                  <Form.Select
+                    name="curator"
+                    value={formData.curator || curators[0]?._id || ''}
+                    onChange={handleChange}
+                    required
+                  >
+                    {curators.length === 0 ? (
+                      <option value="">(Kurator yo‘q)</option>
+                    ) : (
+                      curators.map((c) => (
+                        <option key={c._id} value={c._id}>
+                          {c.firstName || c.login}
+                        </option>
+                      ))
+                    )}
+                  </Form.Select>
+                </Col>
+
+                <Col>
+                  <Form.Label column={'lg'}>Guruh (0,1,2,...)</Form.Label>
+                  <Form.Control
+                    name="group"
+                    type="number"
+                    min={0}
+                    step={1}
+                    value={
+                      formData.group === 0 || typeof formData.group === 'number'
+                        ? formData.group
+                        : ''
+                    }
+                    onChange={handleChange}
+                    required
+                    list="groupOptions"
+                    placeholder="masalan: 0"
+                  />
+                  <datalist id="groupOptions">
+                    {groups.map((g) => (
+                      <option key={g} value={g} />
+                    ))}
+                  </datalist>
+                </Col>
+              </>
             )}
           </Row>
 

@@ -7,6 +7,7 @@ const schema = new mongoose.Schema(
       ref: 'Category',
       required: true,
     },
+    visibility: { type: [Number], default: [] },
     title: { type: String, required: true },
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
@@ -14,7 +15,7 @@ const schema = new mongoose.Schema(
   },
   { timestamps: true }
 )
-
+schema.index({ visibility: 1 })
 const Child = mongoose?.models?.Child || mongoose?.model('Child', schema)
 
 export default Child

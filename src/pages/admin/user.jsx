@@ -24,6 +24,7 @@ const defaultUser = {
   phone: '',
   role: ROLES.STANDARD,
   curator: '',
+  group: null,
   telegramUsername: '',
   telegramChatId: '',
   webPushSubscription: { endpoint: '', keys: { p256dh: '', auth: '' } },
@@ -34,6 +35,12 @@ const defaultUser = {
 
 const normalizeUser = (raw = {}, roles = ROLES) => {
   const roleStd = roles?.STANDARD || 'standard'
+  let group = null
+  if (raw?.group === 0) group = 0
+  else if (typeof raw?.group === 'number') group = raw.group
+  else if (typeof raw?.group === 'string' && /^\d+$/.test(raw.group))
+    group = parseInt(raw.group, 10)
+
   return {
     _id: raw._id || raw.id || '',
     login: raw.login || '',
@@ -43,6 +50,7 @@ const normalizeUser = (raw = {}, roles = ROLES) => {
     phone: raw.phone || '',
     role: raw.role || roleStd,
     curator: raw.curator || '',
+    group,
     telegramUsername: raw.telegramUsername || '',
     telegramChatId: raw.telegramChatId || '',
     webPushSubscription: raw.webPushSubscription || {
@@ -73,6 +81,8 @@ export default function UserPage() {
   const [showPushModal, setShowPushModal] = useState(false)
   const [pushMessage, setPushMessage] = useState('')
   const [sending, setSending] = useState(false)
+
+  // filters / sort / pagination
   const [search, setSearch] = useState('')
   const [limit, setLimit] = useState(10)
   const [page, setPage] = useState(1)
@@ -81,6 +91,9 @@ export default function UserPage() {
   const [statusFilter, setStatusFilter] = useState('')
   const [roleFilter, setRoleFilter] = useState('')
   const [curatorFilter, setCuratorFilter] = useState('')
+  const [groupFilter, setGroupFilter] = useState('') // <-- faqat table uchun
+
+  // selection
   const [selectedAll, setSelectedAll] = useState(false)
   const [selectedIds, setSelectedIds] = useState([])
   const [excludedIds, setExcludedIds] = useState([])
@@ -89,8 +102,8 @@ export default function UserPage() {
   useEffect(() => {
     fetchUsers()
   }, [])
+
   const fetchUsers = async () => {
-    setLoading(true)
     try {
       const res = await axiosInstance.get('user')
       const list = res.data?.users || res.data || []
@@ -104,6 +117,7 @@ export default function UserPage() {
     }
   }
 
+  // curatorlar
   useEffect(() => {
     const onlyCurators = allUsers.filter(
       (u) =>
@@ -113,6 +127,18 @@ export default function UserPage() {
     setCurators(onlyCurators)
   }, [allUsers])
 
+  // mavjud guruhlar (unique sonlar)
+  const groupOptions = useMemo(() => {
+    const setNums = new Set()
+    allUsers.forEach((u) => {
+      if (u.group === 0 || (typeof u.group === 'number' && u.group > 0)) {
+        setNums.add(Number(u.group))
+      }
+    })
+    return Array.from(setNums).sort((a, b) => a - b)
+  }, [allUsers])
+
+  // filterlar
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
     return allUsers.filter((u) => {
@@ -124,6 +150,10 @@ export default function UserPage() {
       )
         return false
       if (curatorFilter && u.curator !== curatorFilter) return false
+      if (groupFilter !== '') {
+        const gf = Number(groupFilter)
+        if (!(u.group === gf)) return false
+      }
 
       if (!q) return true
       const text = [
@@ -138,8 +168,9 @@ export default function UserPage() {
         .toLowerCase()
       return text.includes(q)
     })
-  }, [allUsers, search, statusFilter, roleFilter, curatorFilter])
+  }, [allUsers, search, statusFilter, roleFilter, curatorFilter, groupFilter])
 
+  // sort
   const sorted = useMemo(() => {
     const arr = [...filtered]
     arr.sort((a, b) => {
@@ -151,22 +182,24 @@ export default function UserPage() {
     })
     return arr
   }, [filtered, sortBy, sortOrder])
+
+  // pagination
   const totalPages = Math.max(1, Math.ceil(sorted.length / limit))
   const safePage = Math.min(page, totalPages)
   const pageUsers = useMemo(() => {
     const start = (safePage - 1) * limit
     return sorted.slice(start, start + limit)
   }, [sorted, safePage, limit])
-
   useEffect(() => {
     if (safePage !== page) setPage(safePage)
   }, [safePage, page])
+
+  // header checkbox indeterminate
   const totalSelectedCount = selectedAll
     ? Math.max(0, filtered.length - excludedIds.length)
     : selectedIds.length
   const allSelected =
     filtered.length > 0 && totalSelectedCount === filtered.length
-
   useEffect(() => {
     if (!headerChkRef.current) return
     headerChkRef.current.indeterminate = totalSelectedCount > 0 && !allSelected
@@ -186,6 +219,7 @@ export default function UserPage() {
     return curator?.firstName || curator?.login || ''
   }
 
+  // selection
   const toggleRow = (id) => {
     if (selectedAll) {
       setExcludedIds((prev) =>
@@ -197,7 +231,6 @@ export default function UserPage() {
       )
     }
   }
-
   const toggleSelectAllHeader = () => {
     if (allSelected) {
       setSelectedAll(false)
@@ -210,6 +243,7 @@ export default function UserPage() {
     }
   }
 
+  // edit/delete/submit
   const handleEdit = (user) => {
     setFormData({
       ...defaultUser,
@@ -249,6 +283,19 @@ export default function UserPage() {
       )
     } else {
       delete cleanData.telegramUsername
+    }
+
+    // group: admin/curator => null, boshqalar => int >=0 majburiy
+    const isAdminOrCur =
+      cleanData.role === ROLES.ADMIN || cleanData.role === ROLES.CURATOR
+    if (isAdminOrCur) {
+      cleanData.group = null
+    } else {
+      const g = cleanData.group === 0 ? 0 : parseInt(cleanData.group, 10)
+      if (!Number.isInteger(g) || g < 0) {
+        return Error('Guruh raqami noto‘g‘ri (0 yoki undan katta butun son).')
+      }
+      cleanData.group = g
     }
 
     try {
@@ -358,9 +405,11 @@ export default function UserPage() {
   return (
     <AdminLayout className="p-3">
       <FiltersBar
-        page={safePage} //  <-- qo‘shildi
-        totalPages={totalPages} //  <-- qo‘shildi
+        // pagination (top)
+        page={safePage}
+        totalPages={totalPages}
         setPage={setPage}
+        // search / limit
         search={search}
         setSearch={(v) => {
           setSearch(v)
@@ -371,8 +420,11 @@ export default function UserPage() {
           setLimit(n)
           setPage(1)
         }}
+        // actions
         onAdd={() => {
           const initialForm = { ...defaultUser }
+          // default role STANDARD: groupni ham qo'yamiz
+          initialForm.group = groupOptions[0] ?? 0
           if (
             initialForm.role !== ROLES.ADMIN &&
             initialForm.role !== ROLES.CURATOR &&
@@ -393,9 +445,7 @@ export default function UserPage() {
       <UsersTable
         loading={loading}
         users={pageUsers}
-        totalPages={totalPages}
-        page={safePage}
-        setPage={setPage}
+        // sorting / filters (table header selects)
         sortBy={sortBy}
         sortOrder={sortOrder}
         toggleSort={toggleSort}
@@ -414,9 +464,17 @@ export default function UserPage() {
           setStatusFilter(v)
           setPage(1)
         }}
+        // group filter — faqat table ichida
+        groupFilter={groupFilter}
+        setGroupFilter={(v) => {
+          setGroupFilter(v)
+          setPage(1)
+        }}
+        groupOptions={groupOptions}
         curators={curators}
         roles={Object.values(ROLES)}
         getCuratorName={getCuratorName}
+        // selection
         selectedAll={selectedAll}
         selectedIds={selectedIds}
         excludedIds={excludedIds}
@@ -424,6 +482,7 @@ export default function UserPage() {
         toggleSelectAllHeader={toggleSelectAllHeader}
         headerChkRef={headerChkRef}
         allSelected={allSelected}
+        // actions
         onEdit={handleEdit}
         onDelete={handleDelete}
         onOpenLog={setLogModalUser}
@@ -446,6 +505,7 @@ export default function UserPage() {
         onSubmit={handleSubmit}
         curators={curators}
         editingId={editingId}
+        groups={groupOptions}
       />
 
       <PushLogModal

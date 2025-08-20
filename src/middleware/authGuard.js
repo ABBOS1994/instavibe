@@ -29,7 +29,7 @@ export function authGuard(allowedRoles = null) {
       await dbConnect()
 
       const user = await User.findById(userId)
-        .select('_id login role accessUntil isActive')
+        .select('_id login role accessUntil isActive group')
         .lean()
 
       if (!user) {
@@ -42,7 +42,6 @@ export function authGuard(allowedRoles = null) {
 
       if (user.accessUntil && now > new Date(user.accessUntil)) {
         await User.updateOne({ _id: user._id }, { isActive: false })
-
         return res.status(403).json({
           message: 'Ruxsat muddati tugagan. Hisobingiz bloklandi.',
           success: false,
@@ -67,11 +66,18 @@ export function authGuard(allowedRoles = null) {
           .json({ message: 'Sizda bu sahifaga ruxsat yo‘q!', success: false })
       }
 
+      // group ni ham sessiyaga qo'yamiz
+      const groupValue =
+        (user.group === 0 || (typeof user.group === 'number' && user.group > 0))
+          ? Number(user.group)
+          : null
+
       req.user = {
         _id: user._id,
         login: user.login,
         role: user.role,
         accessUntil: user.accessUntil,
+        group: groupValue,
       }
 
       return next()

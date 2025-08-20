@@ -1,4 +1,3 @@
-// src/models/User.js
 import mongoose from 'mongoose'
 import { ROLES } from '../constants/roles'
 
@@ -12,23 +11,10 @@ const schema = new mongoose.Schema(
       unique: true,
       match: /^[A-Za-z0-9_]{3,30}$/,
     },
-    password: {
-      type: String,
-      required: true,
-      select: false,
-    },
-    phone: {
-      type: String,
-      unique: false,
-      default: null,
-      sparse: true,
-      required: false,
-    },
-    role: {
-      type: String,
-      enum: Object.values(ROLES),
-      default: ROLES.STANDARD,
-    },
+    password: { type: String, required: true, select: false },
+    phone: { type: String, default: null, sparse: true, required: false },
+    role: { type: String, enum: Object.values(ROLES), default: ROLES.STANDARD },
+    group: { type: Number, min: 0, default: null, index: true },
     curator: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
@@ -41,25 +27,17 @@ const schema = new mongoose.Schema(
       default: null,
       sparse: true,
       unique: true,
-      required: false,
     },
-
-    telegramChatId: {
-      type: String,
-      default: null,
-      sparse: true,
-      unique: true,
-      required: false,
-    },
-    notificationSettings: {
-      telegram: Boolean,
-      web: Boolean,
-    },
+    telegramChatId: { type: String, default: null, sparse: true, unique: true },
+    notificationSettings: { telegram: Boolean, web: Boolean },
     accessUntil: { type: Date, default: null },
     lastSeen: { type: Date, default: () => new Date() },
     isActive: { type: Boolean, default: true },
   },
   { timestamps: true }
 )
+
+schema.index({ role: 1 })
+schema.index({ isActive: 1 })
 
 export default mongoose.models.User || mongoose.model('User', schema)

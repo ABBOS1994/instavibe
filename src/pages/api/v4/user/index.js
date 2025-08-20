@@ -1,3 +1,4 @@
+// pages/api/v4/user/index.js
 import db from '../../../../config/db'
 import Model from '../../../../models/User'
 import { authGuard } from '../../../../middleware/authGuard'
@@ -9,6 +10,12 @@ import {
   validateLogin,
 } from '../../../../helpers/normalize'
 
+const parseGroup = (val) => {
+  if (val === null || val === undefined || val === '') return null
+  const n = Number(val)
+  return Number.isInteger(n) && n >= 0 ? n : null
+}
+
 export default async function handler(req, res) {
   await db()
 
@@ -19,11 +26,12 @@ export default async function handler(req, res) {
           search,
           page,
           limit,
-          sortBy,
-          sortOrder,
+          sortBy = 'createdAt',
+          sortOrder = 'desc',
           role,
           curator,
           isActive,
+          group,
         } = req.query
 
         const query = {}
@@ -41,6 +49,24 @@ export default async function handler(req, res) {
         if (isActive !== undefined) query.isActive = isActive === '1'
         if (curator && mongoose.Types.ObjectId.isValid(curator))
           query.curator = curator
+        if (group !== undefined && group !== '') {
+          const g = parseGroup(group)
+          if (g === null) {
+            query.group = null
+          } else {
+            query.group = g
+          }
+        }
+
+        if (!page || !limit) {
+          const users = await Model.find(query)
+            .sort({ [sortBy]: sortOrder === 'asc' ? 1 : -1 })
+            .select('+password')
+            .lean()
+          return res
+            .status(200)
+            .json({ total: users.length, totalPages: 1, users })
+        }
 
         const skip = (Number(page) - 1) * Number(limit)
         const total = await Model.countDocuments(query)
@@ -50,10 +76,7 @@ export default async function handler(req, res) {
           .limit(Number(limit))
           .select('+password')
           .lean()
-
-        // Agar frontend totalPages kutsa:
         const totalPages = Math.max(1, Math.ceil(total / Number(limit)))
-
         return res.status(200).json({ total, totalPages, users })
       } catch (e) {
         console.error('[USER GET ERROR]', e)
@@ -74,6 +97,7 @@ export default async function handler(req, res) {
           curator,
           firstName,
           lastName,
+          group,
         } = req.body
 
         if (!login) {
@@ -110,6 +134,21 @@ export default async function handler(req, res) {
             .json({ message: 'Foydalanuvchi allaqachon mavjud' })
         }
 
+        const needsGroup = [ROLES.STANDARD, ROLES.VIP, ROLES.PREMIUM].includes(
+          role
+        )
+        let finalGroup = null
+        if (needsGroup) {
+          finalGroup = parseGroup(group)
+          if (finalGroup === null) {
+            return res
+              .status(400)
+              .json({ message: 'Bu rol uchun group majburiy (0,1,2,...)' })
+          }
+        } else {
+          finalGroup = null
+        }
+
         const newUser = new Model({
           login: finalLogin,
           password: finalPassword,
@@ -120,9 +159,10 @@ export default async function handler(req, res) {
           curator:
             curator && mongoose.Types.ObjectId.isValid(curator)
               ? curator
-              : req.user.userId,
+              : req.user._id,
           phone: phone?.trim() || null,
           ...(finalUsername && { telegramUsername: finalUsername }),
+          group: finalGroup,
         })
 
         await newUser.save()

@@ -1,5 +1,4 @@
 // pages/api/v4/user/list.js
-
 import dbConnect from '../../../../config/db'
 import User from '../../../../models/User'
 import withLogging from '../../../../middleware/logMiddleware'

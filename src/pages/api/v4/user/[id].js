@@ -1,3 +1,4 @@
+// pages/api/v4/user/[id].js
 import mongoose from 'mongoose'
 import User from '../../../../models/User'
 import withLogging from '../../../../middleware/logMiddleware'
@@ -8,6 +9,12 @@ import {
   normalizeTelegramUsername,
   validateLogin,
 } from '../../../../helpers/normalize'
+
+const parseGroup = (val) => {
+  if (val === null || val === undefined || val === '') return null
+  const n = Number(val)
+  return Number.isInteger(n) && n >= 0 ? n : null
+}
 
 async function handler(req, res) {
   await dbConnect()
@@ -28,36 +35,46 @@ async function handler(req, res) {
       if (method === 'PUT') {
         const updateFields = { ...req.body }
 
+        // normalize login
+        if (updateFields.login) {
+          const { isValid, normalized, error } = validateLogin(updateFields.login)
+          if (!isValid) {
+            return res.status(400).json({ message: error })
+          }
+          updateFields.login = normalized
+        }
+
+        // password bo'sh bo'lsa o'chiramiz
         if (!updateFields.password?.trim()) {
           delete updateFields.password
         }
 
+        // telegramChatId bo'sh string bo'lsa undefined
         if (updateFields.telegramChatId === '') {
           updateFields.telegramChatId = undefined
         }
 
+        // telegram username normalize
         if (updateFields.telegramUsername) {
-          const normalized = normalizeTelegramUsername(
-            updateFields.telegramUsername
-          )
+          const normalized = normalizeTelegramUsername(updateFields.telegramUsername)
           updateFields.telegramUsername = normalized || undefined
         }
 
-        if (updateFields.login) {
-          const { isValid, normalized, error } = validateLogin(
-            updateFields.login
-          )
-          if (!isValid) {
-            return res.status(400).json({ message: error })
-          }
-          updateFields.login = normalized // Case saqlanadi (normalize faqat bo‘shliqni tozalaydi)
-        }
-
+        // accessUntil to'g'ri Date
         if (updateFields.accessUntil) {
           updateFields.accessUntil = new Date(updateFields.accessUntil)
         }
 
-        if ([ROLES.STANDARD, ROLES.VIP].includes(updateFields.role)) {
+        // Hozirgi userni olaylik — role/group majburiyligiga aniq qaror qilish uchun
+        const existing = await User.findById(id).select('role group')
+        if (!existing) {
+          return res.status(404).json({ message: 'Foydalanuvchi topilmadi!', success: false })
+        }
+
+        const nextRole = updateFields.role || existing.role
+
+        // Curator field qoidasi
+        if ([ROLES.STANDARD, ROLES.VIP].includes(nextRole)) {
           if (req.user.role === ROLES.ADMIN && updateFields.curator) {
             if (!mongoose.Types.ObjectId.isValid(updateFields.curator)) {
               return res.status(400).json({
@@ -65,11 +82,9 @@ async function handler(req, res) {
                 success: false,
               })
             }
-            updateFields.curator = new mongoose.Types.ObjectId(
-              updateFields.curator
-            )
+            updateFields.curator = new mongoose.Types.ObjectId(updateFields.curator)
           } else if (req.user.role === ROLES.CURATOR) {
-            updateFields.curator = req.user.userId
+            updateFields.curator = req.user._id
           } else {
             updateFields.curator = null
           }
@@ -77,7 +92,33 @@ async function handler(req, res) {
           updateFields.curator = undefined
         }
 
-        updateFields.updatedBy = req.user.userId
+        // GROUP qoidasi
+        if (nextRole === ROLES.ADMIN || nextRole === ROLES.CURATOR) {
+          // admin/curator: group null
+          updateFields.group = null
+        } else {
+          // oddiy user: group majburiy
+          if (updateFields.group !== undefined) {
+            const g = parseGroup(updateFields.group)
+            if (g === null) {
+              return res.status(400).json({
+                message: 'Group 0 yoki undan katta butun son bo‘lishi kerak',
+                success: false,
+              })
+            }
+            updateFields.group = g
+          } else {
+            // body'da group yo'q bo'lsa, mavjud qiymatga tayanamiz
+            if (!(existing.group === 0 || (typeof existing.group === 'number' && existing.group > 0))) {
+              return res.status(400).json({
+                message: 'Bu rol uchun group majburiy',
+                success: false,
+              })
+            }
+          }
+        }
+
+        updateFields.updatedBy = req.user._id
 
         const updatedUser = await User.findByIdAndUpdate(id, updateFields, {
           new: true,
