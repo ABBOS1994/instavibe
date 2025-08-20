@@ -905,8 +905,9 @@ button {
 
 .admin {
   min-height: px-to-rem(630);
-  max-width: 1200px;
+  //max-width: 1200px;
   margin: px-to-rem(120) auto 0 auto;
+  padding: 0 px-to-rem(25);
 }
 
 .demoBannerCarouselContainer {

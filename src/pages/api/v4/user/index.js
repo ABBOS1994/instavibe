@@ -16,11 +16,11 @@ export default async function handler(req, res) {
     return authGuard([ROLES.ADMIN, ROLES.CURATOR])(req, res, async () => {
       try {
         const {
-          search = '',
-          page = 1,
-          limit = 20,
-          sortBy = 'createdAt',
-          sortOrder = 'desc',
+          search,
+          page,
+          limit,
+          sortBy,
+          sortOrder,
           role,
           curator,
           isActive,
