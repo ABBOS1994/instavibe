@@ -19,7 +19,6 @@ const handleError = (e) => {
   throw e
 }
 
-// "1,2, 3" -> [1,2,3]
 function normalizeVisibility(input) {
   if (Array.isArray(input)) {
     return input
@@ -36,22 +35,48 @@ function normalizeVisibility(input) {
   }
   return []
 }
-
 export const fetchContent = async (contentId) => {
   try {
     if (!contentId) {
-      // Backendda child majburiy, shuning uchun bu yerda faqat bo‘sh obyekt qaytaramiz
       return {
         title: '',
         description: '',
         video: '',
         file: '',
-        visibility: [],
         child: null,
       }
     }
     const { data } = await axiosInstance.get(`content/${contentId}`)
     return data
+  } catch (e) {
+    handleError(e)
+  }
+}
+
+export const fetchContentForChild = async (childId) => {
+  try {
+    if (!childId) throw new Error('childId majburiy')
+    try {
+      const { data } = await axiosInstance.get(`content/${childId}`)
+      return data // mavjud kontent
+    } catch (err1) {
+      if (err1?.response?.status !== 404) throw err1
+      try {
+        const { data } = await axiosInstance.get(`content`, {
+          params: { child: childId },
+        })
+        return data
+      } catch (err2) {
+        if (err2?.response?.status !== 404) throw err2
+        return {
+          title: '',
+          description: '',
+          video: '',
+          file: '',
+          child: childId,
+        }
+      }
+    }
   } catch (e) {
     handleError(e)
   }
@@ -142,6 +167,7 @@ export const saveContent = async (isEditing, contentData) => {
     const payload = {
       ...contentData,
       visibility: normalizeVisibility(contentData.visibility),
+      child: contentData.child,
     }
     const { data } = await axiosInstance[method](url, payload)
     handleSuccess(
@@ -150,23 +176,6 @@ export const saveContent = async (isEditing, contentData) => {
         : 'Content muvaffaqiyatli yaratildi'
     )
     return data
-  } catch (e) {
-    handleError(e)
-  }
-}
-
-export const uploadFile = async (file) => {
-  try {
-    const formData = new FormData()
-    formData.append('file', file)
-
-    const { data } = await axiosInstance.post('content/upload', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    })
-
-    return data.url
   } catch (e) {
     handleError(e)
   }

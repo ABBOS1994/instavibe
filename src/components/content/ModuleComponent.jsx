@@ -6,16 +6,9 @@ function toNumArray(arr) {
   if (!Array.isArray(arr)) return []
   return arr.map((x) => Number(x)).filter((n) => Number.isInteger(n) && n >= 0)
 }
-
-/**
- * Disabled mantiqi:
- * - isActive === false => disabled
- * - visibility bo'sh => hech kim ko'rmaydi => disabled
- * - userGroup raqam emas => disabled
- * - visibility ichida userGroup bo'lmasa => disabled
- */
-function isModuleDisabled(isActive, visibility, userGroup) {
+function isModuleDisabled(isActive, visibility, userGroup, isPrivileged) {
   if (!isActive) return true
+  if (isPrivileged) return false
   const vis = toNumArray(visibility)
   if (vis.length === 0) return true
   const g = Number(userGroup)
@@ -27,8 +20,14 @@ const ModuleComponent = ({
   data: { title, description, isActive, _id, visibility = [] },
   idx,
   userGroup,
+  isPrivileged = false,
 }) => {
-  const disabled = isModuleDisabled(isActive, visibility, userGroup)
+  const disabled = isModuleDisabled(
+    isActive,
+    visibility,
+    userGroup,
+    isPrivileged
+  )
   const linkUrl = disabled ? '#' : `/cabinet/${_id}`
 
   return (

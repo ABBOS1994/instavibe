@@ -8,16 +8,19 @@ import { ROLES } from '../../../../constants/roles'
 async function handler(req, res) {
   try {
     return authGuard([ROLES.ADMIN, ROLES.CURATOR])(req, res, async () => {
-      const currentUser = req.user
-      if (!currentUser) {
+      if (!req.user) {
         return res.status(401).json({ message: '❌ Token mavjud emas' })
       }
 
-      const query =
-        currentUser.role === ROLES.CURATOR ? { curator: currentUser._id } : {}
       await dbConnect()
 
-      const users = await User.find(query).sort({ createdAt: -1 }).lean()
+      const isCurator = String(req.user.role).toLowerCase() === ROLES.CURATOR
+      const query = isCurator ? { curator: req.user._id } : {}
+
+      const users = await User.find(query)
+        .sort({ createdAt: -1 })
+        .select('+password')
+        .lean()
 
       return res.status(200).json(users)
     })

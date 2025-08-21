@@ -36,7 +36,8 @@ export default function NavBar() {
   const isAdmin = role === ROLES.ADMIN
   const isCurator = role === ROLES.CURATOR
   const showAdminPanel = isAdmin || isCurator
-  const showCabinet = !!token && !isCurator // curator uchun yashiramiz
+
+  const showCabinet = !!token
 
   const handleModal = () => setShowModal((prev) => !prev)
 

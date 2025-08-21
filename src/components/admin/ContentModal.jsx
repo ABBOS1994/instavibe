@@ -1,4 +1,3 @@
-// src/components/admin/ContentModal.jsx
 import React from 'react'
 import { Modal, Button, Form, Row, Col } from 'react-bootstrap'
 
@@ -10,16 +9,6 @@ export default function ContentModal({
   handleContentSave,
   isEditingContent,
 }) {
-  const visibilityValue = Array.isArray(currentContent?.visibility)
-    ? currentContent.visibility.join(', ')
-    : currentContent?.visibility || ''
-
-  const onVisibilityChange = (e) => {
-    handleContentChange({
-      target: { name: 'visibility', value: e.target.value, type: 'text' },
-    })
-  }
-
   return (
     <Modal
       show={showContentModal}
@@ -89,20 +78,6 @@ export default function ContentModal({
               </Form.Group>
             </Col>
           </Row>
-
-          <Form.Group controlId="visibility" className="mb-3">
-            <Form.Label column="lg">Guruhlar (vergul bilan)</Form.Label>
-            <Form.Control
-              type="text"
-              placeholder="masalan: 0,1,2"
-              value={visibilityValue}
-              onChange={onVisibilityChange}
-            />
-            <Form.Text className="text-muted">
-              Bo‘sh — hech kim ko‘rmaydi. Raqamlar ro‘yxati — faqat o‘sha
-              guruhlar ko‘radi.
-            </Form.Text>
-          </Form.Group>
         </Form>
       </Modal.Body>
       <Modal.Footer>

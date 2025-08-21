@@ -1,4 +1,3 @@
-// pages/cabinet/index.jsx
 import React, { useEffect, useState } from 'react'
 import Layout from '../../Layout'
 import PrivateRoute from '../../components/PrivateRoute'
@@ -13,6 +12,7 @@ import BannerModel from '../../models/Banner'
 import LinkModel from '../../models/Link'
 import CategoryModel from '../../models/Category'
 import axiosInstance from '../../config/axiosConfig'
+import { ROLES } from '../../constants/roles'
 
 export default function CabinetPage({
   banners,
@@ -23,20 +23,23 @@ export default function CabinetPage({
   const [userGroup, setUserGroup] = useState(
     typeof initialUserGroup === 'number' ? initialUserGroup : null
   )
+  const [isPrivileged, setIsPrivileged] = useState(false) // admin|curator uchun
 
   useEffect(() => {
-    if (userGroup === null) {
-      axiosInstance
-        .get('auth/me')
-        .then((res) => {
-          const g = res?.data?.group
-          if (g === 0 || Number.isInteger(Number(g))) {
-            setUserGroup(Number(g))
-          }
-        })
-        .catch(() => {})
-    }
-  }, [userGroup])
+    axiosInstance
+      .get('auth/me')
+      .then((res) => {
+        const g = res?.data?.group
+        if (g === 0 || Number.isInteger(Number(g))) {
+          setUserGroup(Number(g))
+        }
+        const rawRole =
+          res?.data?.role?.name || res?.data?.role?._id || res?.data?.role
+        const role = rawRole ? String(rawRole).toLowerCase() : null
+        setIsPrivileged(role === ROLES.ADMIN || role === ROLES.CURATOR)
+      })
+      .catch(() => {})
+  }, [])
 
   return (
     <PrivateRoute>
@@ -45,7 +48,11 @@ export default function CabinetPage({
         <ScrollingText />
         <BannerLayout data={banners} />
         <Link data={links} />
-        <Module data={modules} userGroup={userGroup} />
+        <Module
+          data={modules}
+          userGroup={userGroup}
+          isPrivileged={isPrivileged}
+        />
       </Layout>
     </PrivateRoute>
   )

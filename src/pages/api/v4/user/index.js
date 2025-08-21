@@ -1,5 +1,4 @@
 // pages/api/v4/user/index.js
-import db from '../../../../config/db'
 import Model from '../../../../models/User'
 import { authGuard } from '../../../../middleware/authGuard'
 import { ROLES } from '../../../../constants/roles'
@@ -17,74 +16,36 @@ const parseGroup = (val) => {
 }
 
 export default async function handler(req, res) {
-  await db()
-
   if (req.method === 'GET') {
     return authGuard([ROLES.ADMIN, ROLES.CURATOR])(req, res, async () => {
       try {
-        const {
-          search,
-          page,
-          limit,
-          sortBy = 'createdAt',
-          sortOrder = 'desc',
-          role,
-          curator,
-          isActive,
-          group,
-        } = req.query
-
-        const query = {}
-
-        if (search) {
-          query.$or = [
-            { login: { $regex: search, $options: 'i' } },
-            { firstName: { $regex: search, $options: 'i' } },
-            { lastName: { $regex: search, $options: 'i' } },
-            { phone: { $regex: search, $options: 'i' } },
-          ]
-        }
-
-        if (role) query.role = role
-        if (isActive !== undefined) query.isActive = isActive === '1'
-        if (curator && mongoose.Types.ObjectId.isValid(curator))
-          query.curator = curator
-        if (group !== undefined && group !== '') {
-          const g = parseGroup(group)
-          if (g === null) {
-            query.group = null
-          } else {
-            query.group = g
+        const roleLower = (req.user?.role || '').toLowerCase()
+        const filter = {}
+        if (roleLower === ROLES.CURATOR) {
+          filter.curator = req.user._id
+        } else {
+          const { curator } = req.query || {}
+          if (curator !== undefined && curator !== '') {
+            if (!mongoose.Types.ObjectId.isValid(curator)) {
+              return res
+                .status(400)
+                .json({ message: 'curator noto‘g‘ri ObjectId' })
+            }
+            filter.curator = curator
           }
         }
 
-        if (!page || !limit) {
-          const users = await Model.find(query)
-            .sort({ [sortBy]: sortOrder === 'asc' ? 1 : -1 })
-            .select('+password')
-            .lean()
-          return res
-            .status(200)
-            .json({ total: users.length, totalPages: 1, users })
-        }
-
-        const skip = (Number(page) - 1) * Number(limit)
-        const total = await Model.countDocuments(query)
-        const users = await Model.find(query)
-          .sort({ [sortBy]: sortOrder === 'asc' ? 1 : -1 })
-          .skip(skip)
-          .limit(Number(limit))
+        const users = await Model.find(filter)
+          .sort({ createdAt: -1 })
           .select('+password')
           .lean()
-        const totalPages = Math.max(1, Math.ceil(total / Number(limit)))
-        return res.status(200).json({ total, totalPages, users })
+        return res.status(200).json(users)
       } catch (e) {
         console.error('[USER GET ERROR]', e)
         return res.status(500).json({ message: 'Server xatoligi' })
       }
     })
   }
-
   if (req.method === 'POST') {
     return authGuard([ROLES.ADMIN, ROLES.CURATOR])(req, res, async () => {
       try {
@@ -133,21 +94,28 @@ export default async function handler(req, res) {
             .status(400)
             .json({ message: 'Foydalanuvchi allaqachon mavjud' })
         }
-
         const needsGroup = [ROLES.STANDARD, ROLES.VIP, ROLES.PREMIUM].includes(
           role
         )
         let finalGroup = null
         if (needsGroup) {
-          finalGroup = parseGroup(group)
-          if (finalGroup === null) {
+          const n = parseGroup(group)
+          if (n === null) {
             return res
               .status(400)
               .json({ message: 'Bu rol uchun group majburiy (0,1,2,...)' })
           }
+          finalGroup = n
         } else {
           finalGroup = null
         }
+        const roleLower = (req.user?.role || '').toLowerCase()
+        const finalCurator =
+          roleLower === ROLES.CURATOR
+            ? req.user._id
+            : curator && mongoose.Types.ObjectId.isValid(curator)
+              ? curator
+              : req.user._id
 
         const newUser = new Model({
           login: finalLogin,
@@ -156,10 +124,7 @@ export default async function handler(req, res) {
           lastName,
           role,
           accessUntil,
-          curator:
-            curator && mongoose.Types.ObjectId.isValid(curator)
-              ? curator
-              : req.user._id,
+          curator: finalCurator,
           phone: phone?.trim() || null,
           ...(finalUsername && { telegramUsername: finalUsername }),
           group: finalGroup,

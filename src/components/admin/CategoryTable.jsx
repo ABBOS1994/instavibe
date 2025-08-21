@@ -1,4 +1,3 @@
-// src/components/admin/CategoryTable.jsx
 import React from 'react'
 import { Table, Button } from 'react-bootstrap'
 import CategoryRow from './CategoryRow'
@@ -18,13 +17,12 @@ export default function CategoryTable({
     <Table striped bordered hover responsive>
       <thead>
         <tr>
-          <th>Sort</th>
-          <th>Title</th>
+          <th style={{ width: 80 }}>Sort</th>
+          <th style={{ minWidth: 220 }}>Title</th>
           <th>Description</th>
-          <th>Groups</th>
-          {/* visibility column */}
-          <th>Active</th>
-          <th>
+          <th style={{ minWidth: 220 }}>Groups</th>
+          <th style={{ width: 90 }}>Active</th>
+          <th style={{ width: 160 }}>
             <Button variant="primary" onClick={() => handleShow()}>
               Add New
             </Button>

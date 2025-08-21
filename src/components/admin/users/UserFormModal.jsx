@@ -10,21 +10,18 @@ export default function UserFormModal({
   onSubmit,
   curators = [],
   editingId,
-  groups = [],
+  groups = [], // ← Group CRUD dan kelgan kodlar ro'yxati (masalan [0,1,2])
   viewerRole,
   viewerId,
 }) {
   const ROLES_ARRAY = Array.isArray(ROLES) ? ROLES : Object.values(ROLES)
-
-  // Tahrirlanayotgan/yaratilayotgan USERning roli (target user)
   const isTargetAdminOrCurator =
     formData.role === ROLES.ADMIN || formData.role === ROLES.CURATOR
-
-  // Joriy kirgan foydalanuvchi curatormi?
   const isViewerCurator = viewerRole === ROLES.CURATOR
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target
+
     if (name.startsWith('notificationSettings.')) {
       const key = name.split('.')[1]
       setFormData((prev) => ({
@@ -41,24 +38,31 @@ export default function UserFormModal({
       const newRole = value
       setFormData((prev) => {
         const next = { ...prev, role: newRole }
-        // Target user admin/curator bo‘lsa — curator maydonini tozalaymiz
         if (newRole === ROLES.ADMIN || newRole === ROLES.CURATOR) {
           next.curator = ''
           next.group = null
         } else {
-          // oddiy foydalanuvchi bo‘lsa
-          // agar viewer curator bo‘lsa — majburan viewerId ni qo‘yamiz
           if (isViewerCurator) {
             next.curator = viewerId || ''
           } else if (!prev.curator && curators.length > 0) {
             next.curator = curators[0]._id
           }
+          // default group
           if (next.group === null || next.group === undefined) {
-            next.group = 0
+            next.group = groups?.[0] ?? 0
           }
         }
         return next
       })
+      return
+    }
+
+    if (name === 'group') {
+      const n = Number(value)
+      setFormData((prev) => ({
+        ...prev,
+        group: Number.isInteger(n) && n >= 0 ? n : 0,
+      }))
       return
     }
 
@@ -68,17 +72,21 @@ export default function UserFormModal({
     }))
   }
 
+  // Modal ochilganda (yoki groups o'zgarganda) default guruhni tekshiramiz
   useEffect(() => {
     if (!show) return
-    // Modal ochilganda, agar target user oddiy bo‘lsa va viewer curator bo‘lsa — kuratorni viewerga o‘rnatamiz
-    if (!isTargetAdminOrCurator) {
-      setFormData((prev) => ({
+    if (isTargetAdminOrCurator) return
+    setFormData((prev) => {
+      // agar mavjud group groups ro'yxatida yo'q bo'lsa, birinchisini yoki 0 ni qo'yamiz
+      const has = prev.group === 0 || groups.includes(prev.group ?? NaN)
+      return {
         ...prev,
         curator: isViewerCurator ? viewerId || prev.curator : prev.curator,
-        group: prev.group === null || prev.group === undefined ? 0 : prev.group,
-      }))
-    }
-  }, [show, isTargetAdminOrCurator, isViewerCurator, viewerId, setFormData])
+        group: has ? prev.group : (groups?.[0] ?? 0),
+      }
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [show, groups, isTargetAdminOrCurator, isViewerCurator, viewerId])
 
   return (
     <Modal show={show} onHide={onHide} centered size="lg">
@@ -175,11 +183,7 @@ export default function UserFormModal({
               </Form.Select>
             </Col>
 
-            {/* Kurator maydoni:
-                - Target user admin/curator bo‘lsa: umuman ko‘rsatilmaydi
-                - Target user oddiy bo‘lsa:
-                   * Viewer CURATOR bo‘lsa — selectni ko‘rsatmaymiz, avtomatik viewerId
-                   * Viewer ADMIN bo‘lsa — select ko‘rsatiladi */}
+            {/* Admin bo'lsa kurator selectini ko'rsatmaymiz; curator ko'rishda esa o'zi avtomatik */}
             {!isTargetAdminOrCurator && !isViewerCurator && (
               <Col>
                 <Form.Label column={'lg'}>Kurator</Form.Label>
@@ -206,7 +210,6 @@ export default function UserFormModal({
               <Col>
                 <Form.Label column={'lg'}>Kurator</Form.Label>
                 <Form.Control value="(O'zingiz)" disabled readOnly />
-                {/* qiymat serverga borishi uchun hidden input */}
                 <input type="hidden" name="curator" value={viewerId || ''} />
               </Col>
             )}
@@ -226,8 +229,8 @@ export default function UserFormModal({
                   }
                   onChange={handleChange}
                   required
+                  disabled={groups.length === 0}
                 >
-                  {/* mavjudlar ro‘yxati */}
                   {Array.isArray(groups) && groups.length > 0 ? (
                     groups.map((g) => (
                       <option key={g} value={g}>
@@ -235,13 +238,15 @@ export default function UserFormModal({
                       </option>
                     ))
                   ) : (
-                    <>
-                      <option value={0}>0</option>
-                      <option value={1}>1</option>
-                      <option value={2}>2</option>
-                    </>
+                    <option value="">Guruhlar mavjud emas</option>
                   )}
                 </Form.Select>
+                {groups.length === 0 && (
+                  <Form.Text className="text-warning">
+                    Guruhlar yo‘q — avval <b>Admin → Group</b> bo‘limida
+                    qo‘shing.
+                  </Form.Text>
+                )}
               </Col>
             </Row>
           )}

@@ -22,7 +22,6 @@ async function handler(req, res) {
   return authGuard([ROLES.ADMIN, ROLES.CURATOR])(req, res, async () => {
     try {
       const { id } = req.query
-
       if (!mongoose.Types.ObjectId.isValid(id)) {
         return res.status(400).json({
           message: 'ID noto‘g‘ri formatda kiritilgan',
@@ -31,11 +30,40 @@ async function handler(req, res) {
       }
 
       const method = req.method
+      const requesterRole = (req.user?.role || '').toLowerCase()
+
+      const targetUser = await User.findById(id)
+      if (!targetUser) {
+        return res
+          .status(404)
+          .json({ message: 'Foydalanuvchi topilmadi!', success: false })
+      }
+
+      if (requesterRole === ROLES.CURATOR) {
+        const isOwner = String(targetUser.curator) === String(req.user._id)
+        if (!isOwner) {
+          return res
+            .status(403)
+            .json({ message: 'Ruxsat yo‘q', success: false })
+        }
+      }
 
       if (method === 'PUT') {
         const updateFields = { ...req.body }
 
-        // normalize login
+        if (
+          requesterRole === ROLES.CURATOR &&
+          updateFields.role &&
+          [ROLES.ADMIN, ROLES.CURATOR].includes(
+            String(updateFields.role).toLowerCase()
+          )
+        ) {
+          return res.status(403).json({
+            message: 'Kurator bu rolga o‘zgartira olmaydi',
+            success: false,
+          })
+        }
+
         if (updateFields.login) {
           const { isValid, normalized, error } = validateLogin(
             updateFields.login
@@ -46,17 +74,14 @@ async function handler(req, res) {
           updateFields.login = normalized
         }
 
-        // password bo'sh bo'lsa o'chiramiz
         if (!updateFields.password?.trim()) {
           delete updateFields.password
         }
 
-        // telegramChatId bo'sh string bo'lsa undefined
         if (updateFields.telegramChatId === '') {
           updateFields.telegramChatId = undefined
         }
 
-        // telegram username normalize
         if (updateFields.telegramUsername) {
           const normalized = normalizeTelegramUsername(
             updateFields.telegramUsername
@@ -64,48 +89,40 @@ async function handler(req, res) {
           updateFields.telegramUsername = normalized || undefined
         }
 
-        // accessUntil to'g'ri Date
         if (updateFields.accessUntil) {
           updateFields.accessUntil = new Date(updateFields.accessUntil)
         }
 
-        // Hozirgi userni olaylik — role/group majburiyligiga aniq qaror qilish uchun
-        const existing = await User.findById(id).select('role group')
-        if (!existing) {
-          return res
-            .status(404)
-            .json({ message: 'Foydalanuvchi topilmadi!', success: false })
-        }
+        const nextRole = (
+          updateFields.role ||
+          targetUser.role ||
+          ''
+        ).toLowerCase()
 
-        const nextRole = updateFields.role || existing.role
-
-        // Curator field qoidasi
-        if ([ROLES.STANDARD, ROLES.VIP].includes(nextRole)) {
-          if (req.user.role === ROLES.ADMIN && updateFields.curator) {
-            if (!mongoose.Types.ObjectId.isValid(updateFields.curator)) {
-              return res.status(400).json({
-                message: 'Kurator ID noto‘g‘ri formatda',
-                success: false,
-              })
-            }
-            updateFields.curator = new mongoose.Types.ObjectId(
-              updateFields.curator
-            )
-          } else if (req.user.role === ROLES.CURATOR) {
+        // Kurator maydoni qoidası:
+        if ([ROLES.STANDARD, ROLES.PREMIUM, ROLES.VIP].includes(nextRole)) {
+          if (requesterRole === ROLES.CURATOR) {
             updateFields.curator = req.user._id
-          } else {
-            updateFields.curator = null
+          } else if (requesterRole === ROLES.ADMIN) {
+            if (updateFields.curator) {
+              if (!mongoose.Types.ObjectId.isValid(updateFields.curator)) {
+                return res.status(400).json({
+                  message: 'Kurator ID noto‘g‘ri formatda',
+                  success: false,
+                })
+              }
+              updateFields.curator = new mongoose.Types.ObjectId(
+                updateFields.curator
+              )
+            }
           }
         } else {
           updateFields.curator = undefined
         }
 
-        // GROUP qoidasi
         if (nextRole === ROLES.ADMIN || nextRole === ROLES.CURATOR) {
-          // admin/curator: group null
           updateFields.group = null
         } else {
-          // oddiy user: group majburiy
           if (updateFields.group !== undefined) {
             const g = parseGroup(updateFields.group)
             if (g === null) {
@@ -116,13 +133,10 @@ async function handler(req, res) {
             }
             updateFields.group = g
           } else {
-            // body'da group yo'q bo'lsa, mavjud qiymatga tayanamiz
-            if (
-              !(
-                existing.group === 0 ||
-                (typeof existing.group === 'number' && existing.group > 0)
-              )
-            ) {
+            const hasExistingGroup =
+              targetUser.group === 0 ||
+              (typeof targetUser.group === 'number' && targetUser.group > 0)
+            if (!hasExistingGroup) {
               return res.status(400).json({
                 message: 'Bu rol uchun group majburiy',
                 success: false,

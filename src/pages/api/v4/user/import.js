@@ -12,7 +12,6 @@ export const config = { api: { bodyParser: false } }
 function normalizeLogin(login = '') {
   return login.trim().replace(/\s+/g, '')
 }
-
 function validateLogin(login = '') {
   const normalized = normalizeLogin(login)
   const isValid = /^[A-Za-z0-9_]{3,30}$/.test(normalized)
@@ -24,11 +23,9 @@ function validateLogin(login = '') {
       : 'Login faqat harflar (A–Z, a–z), raqamlar va pastki chiziqdan iborat (3–30 belgi)',
   }
 }
-
 function normalizeTelegramUsername(username = '') {
   return username.replace(/^@/, '').toLowerCase()
 }
-
 const parseGroup = (val) => {
   if (val === null || val === undefined || val === '') return null
   const n = Number(val)
@@ -76,6 +73,9 @@ async function handler(req, res) {
           success: false,
         })
       }
+
+      const requesterRole = String(req.user.role).toLowerCase()
+      const isCurator = requesterRole === ROLES.CURATOR
 
       let successCount = 0
       const errors = []
@@ -131,27 +131,25 @@ async function handler(req, res) {
           continue
         }
 
-        let curatorUser = null
-        if (curator) {
-          curatorUser = await User.findOne({
-            $or: [
-              { firstName: new RegExp('^' + curator + '$', 'i') },
-              { login: new RegExp('^' + curator + '$', 'i') },
-            ],
-          }).select('_id')
-        }
-        if (!curatorUser) {
-          curatorUser = await User.findOne({
-            role: { $in: [ROLES.ADMIN, ROLES.CURATOR] },
-          }).select('_id')
-        }
-
-        const normalizedRole = Object.values(ROLES).includes(
-          (role || '').toLowerCase()
-        )
-          ? role.toLowerCase()
+        // Role normalizatsiya + kurator cheklovi
+        const requestedRole = (role || '').toLowerCase()
+        const normalizedRole = Object.values(ROLES).includes(requestedRole)
+          ? requestedRole
           : ROLES.STANDARD
 
+        if (
+          isCurator &&
+          [ROLES.ADMIN, ROLES.CURATOR].includes(normalizedRole)
+        ) {
+          errors.push({
+            line,
+            login: finalLogin,
+            reason: 'Kurator admin/curator rolida foydalanuvchi yarata olmaydi',
+          })
+          continue
+        }
+
+        // Access muddat
         let accessDate = null
         if (accessUntil) {
           const parsed = new Date(accessUntil)
@@ -168,6 +166,7 @@ async function handler(req, res) {
             ? ['1', 'true', 'active', 'aktiv'].includes(isActive.toLowerCase())
             : true
 
+        // Group qoidasi
         const needsGroup = [ROLES.STANDARD, ROLES.VIP, ROLES.PREMIUM].includes(
           normalizedRole
         )
@@ -182,6 +181,31 @@ async function handler(req, res) {
           continue
         }
 
+        // Kurator maydoni:
+        let curatorUserId = null
+        if (isCurator) {
+          // Kurator o‘ziga bog‘laydi
+          curatorUserId = req.user._id
+        } else {
+          // Admin bo‘lsa: CSVdagi kurator bo‘yicha topishga harakat qilamiz, bo‘lmasa fallback
+          if (curator) {
+            const foundCurator = await User.findOne({
+              $or: [
+                { firstName: new RegExp('^' + curator + '$', 'i') },
+                { login: new RegExp('^' + curator + '$', 'i') },
+              ],
+              role: { $in: [ROLES.ADMIN, ROLES.CURATOR] },
+            }).select('_id')
+            if (foundCurator?._id) curatorUserId = foundCurator._id
+          }
+          if (!curatorUserId) {
+            const fallback = await User.findOne({
+              role: { $in: [ROLES.ADMIN, ROLES.CURATOR] },
+            }).select('_id')
+            curatorUserId = fallback?._id || null
+          }
+        }
+
         try {
           await User.create({
             login: finalLogin,
@@ -189,7 +213,11 @@ async function handler(req, res) {
             phone: finalPhone,
             telegramUsername: finalUsername,
             role: normalizedRole,
-            curator: curatorUser?._id || null,
+            curator: [ROLES.STANDARD, ROLES.PREMIUM, ROLES.VIP].includes(
+              normalizedRole
+            )
+              ? curatorUserId
+              : null,
             accessUntil: accessDate,
             firstName: firstName?.trim() || '',
             lastName: lastName?.trim() || '',

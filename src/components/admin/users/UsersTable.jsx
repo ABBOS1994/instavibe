@@ -1,10 +1,9 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import { Table, Spinner, Button, Form } from 'react-bootstrap'
 
 export default function UsersTable({
   loading,
   users,
-  // sorting / filters
   sortBy,
   sortOrder,
   toggleSort,
@@ -14,13 +13,12 @@ export default function UsersTable({
   setCuratorFilter,
   statusFilter,
   setStatusFilter,
-  groupFilter, // <-- qo'shildi
-  setGroupFilter, // <-- qo'shildi
-  groupOptions = [], // <-- qo'shildi
+  groupFilter,
+  setGroupFilter,
+  groupOptions = [],
   curators,
   roles = [],
   getCuratorName,
-  // selection
   selectedAll,
   selectedIds,
   excludedIds,
@@ -33,6 +31,14 @@ export default function UsersTable({
   onDelete,
   onOpenLog,
 }) {
+  // groupOptions yangilanganda, mavjud filtr ro'yxatda bo'lmasa reset qilamiz
+  useEffect(() => {
+    if (groupFilter === '') return
+    const num = Number(groupFilter)
+    const exists = groupOptions.some((g) => Number(g) === num)
+    if (!exists) setGroupFilter('')
+  }, [groupOptions, groupFilter, setGroupFilter])
+
   if (loading) return <Spinner animation="border" />
 
   return (
@@ -92,8 +98,6 @@ export default function UsersTable({
                 Muddat{' '}
                 {sortBy === 'accessUntil' && (sortOrder === 'asc' ? '↑' : '↓')}
               </th>
-
-              {/* GROUP FILTER (headerda), qatordagi hujayra tag'da */}
               <th>
                 <Form.Select
                   size="sm"
@@ -109,8 +113,6 @@ export default function UsersTable({
                   ))}
                 </Form.Select>
               </th>
-
-              {/* Role / Curator / Status filterlari */}
               <th>
                 <Form.Select
                   size="sm"
@@ -183,8 +185,6 @@ export default function UsersTable({
                     ? new Date(u.accessUntil).toISOString().slice(0, 10)
                     : ''}
                 </td>
-
-                {/* group qiymati (headerdagi group filterga mos ustun) */}
                 <td>
                   {u.group === 0 || typeof u.group === 'number' ? u.group : '—'}
                 </td>

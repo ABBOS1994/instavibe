@@ -1,6 +1,5 @@
-// src/components/admin/CategoryModal.jsx
-import React, { useMemo } from 'react'
-import { Modal, Button, Form } from 'react-bootstrap'
+import React, { useMemo, useCallback } from 'react'
+import { Modal, Form, Badge } from 'react-bootstrap'
 
 export default function CategoryModal({
   showModal,
@@ -9,30 +8,29 @@ export default function CategoryModal({
   handleChange,
   handleSave,
   isEditing,
+  groupCodes = [],
 }) {
-  const visibilityCsv = useMemo(() => {
+  const selectedVisibility = useMemo(() => {
     const arr = Array.isArray(currentCategory?.visibility)
       ? currentCategory.visibility
       : []
-    return arr.join(',')
+    return arr
+      .map((n) => Number(n))
+      .filter((n) => Number.isInteger(n) && n >= 0)
   }, [currentCategory?.visibility])
 
-  const onVisibilityChange = (e) => {
-    const raw = e.target.value || ''
-    const nums = raw
-      .split(',')
-      .map((s) => s.trim())
-      .filter((s) => s !== '')
-      .map((s) => Number(s))
-      .filter((n) => Number.isInteger(n) && n >= 0)
-    handleChange({
-      target: {
-        name: 'visibility',
-        value: nums,
-        type: 'text',
-      },
-    })
-  }
+  const toggleCode = useCallback(
+    (code) => {
+      const set = new Set(selectedVisibility)
+      if (set.has(code)) set.delete(code)
+      else set.add(code)
+      const next = [...set].sort((a, b) => a - b)
+      handleChange({
+        target: { name: 'visibility', value: next, type: 'text' },
+      })
+    },
+    [selectedVisibility, handleChange]
+  )
 
   return (
     <Modal show={showModal} onHide={handleClose} centered>
@@ -41,6 +39,7 @@ export default function CategoryModal({
           {isEditing ? 'Kategoriya tahrirlash' : 'Yangi kategoriya'}
         </Modal.Title>
       </Modal.Header>
+
       <Modal.Body>
         <Form>
           <Form.Group className="mb-3">
@@ -69,18 +68,28 @@ export default function CategoryModal({
           </Form.Group>
 
           <Form.Group className="mb-3">
-            <Form.Label column="lg">
-              Ko‘rinadigan guruhlar (masalan: <code>0,1,2</code>)
-            </Form.Label>
-            <Form.Control
-              type="text"
-              value={visibilityCsv}
-              onChange={onVisibilityChange}
-              placeholder="Masalan: 0,1,2"
-            />
-            <Form.Text>
-              Bo‘sh qoldirilsa, hech kim ko‘rmaydi (disabled).
-            </Form.Text>
+            <Form.Label column="lg">Ko‘rinadigan guruhlar</Form.Label>
+            {groupCodes.length ? (
+              <div className="d-flex flex-wrap gap-2">
+                {groupCodes.map((code) => {
+                  const active = selectedVisibility.includes(code)
+                  return (
+                    <Badge
+                      key={code}
+                      pill
+                      bg={active ? 'primary' : 'dark'}
+                      role="button"
+                      onClick={() => toggleCode(code)}
+                      style={{ cursor: 'pointer', userSelect: 'none' }}
+                    >
+                      {code}
+                    </Badge>
+                  )
+                })}
+              </div>
+            ) : (
+              <div className="text-muted">Grouplar yo‘q</div>
+            )}
           </Form.Group>
 
           <Form.Group className="mb-3">
@@ -94,7 +103,7 @@ export default function CategoryModal({
             />
           </Form.Group>
 
-          <Form.Group className="mb-3">
+          <Form.Group className="mb-1">
             <Form.Check
               type="switch"
               name="isActive"
@@ -105,14 +114,15 @@ export default function CategoryModal({
           </Form.Group>
         </Form>
       </Modal.Body>
-      <Modal.Footer>
-        <Button variant="secondary" onClick={handleClose}>
+
+      <div className="d-flex justify-content-end gap-2 p-3 pt-0">
+        <button className="btn btn-secondary" onClick={handleClose}>
           Bekor qilish
-        </Button>
-        <Button variant="primary" onClick={handleSave}>
+        </button>
+        <button className="btn btn-primary" onClick={handleSave}>
           Saqlash
-        </Button>
-      </Modal.Footer>
+        </button>
+      </div>
     </Modal>
   )
 }

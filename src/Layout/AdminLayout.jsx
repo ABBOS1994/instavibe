@@ -36,7 +36,6 @@ function AdminLayout({ children }) {
   const isAdmin = role === ROLES.ADMIN
   const isCurator = role === ROLES.CURATOR
 
-  // Curatorga faqat shu pathlarga ruxsat:
   const curatorAllowed = useMemo(() => ['/admin', '/admin/user'], [])
   useEffect(() => {
     if (!role) return
@@ -48,10 +47,10 @@ function AdminLayout({ children }) {
     }
   }, [isCurator, role, router, curatorAllowed])
 
-  // Menyu elementlari
   const MENU = [
     { href: '/admin', label: 'Dashboard' },
     { href: '/admin/user', label: 'Users' },
+    { href: '/admin/group', label: 'Group', adminOnly: true },
     { href: '/admin/content', label: 'Content', adminOnly: true },
     { href: '/admin/banner', label: 'Banner', adminOnly: true },
     { href: '/admin/link', label: 'Link', adminOnly: true },
@@ -61,12 +60,10 @@ function AdminLayout({ children }) {
   ]
 
   const visibleMenu = MENU.filter((item) => {
-    if (item.adminOnly) return isAdmin // faqat admin
-    return isAdmin || isCurator // dashboard & users
+    if (item.adminOnly) return isAdmin
+    return isAdmin || isCurator
   })
 
-  // Agar admin ham, curator ham bo'lmasa — bu layoutga umuman kira olmaydi (backend ham to'sadi),
-  // lekin xavfsizlik uchun / ga qaytaramiz.
   useEffect(() => {
     if (role && !(isAdmin || isCurator)) {
       router.replace('/')

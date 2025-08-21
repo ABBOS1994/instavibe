@@ -1,8 +1,13 @@
 import mongoose from 'mongoose'
 
-const schema = new mongoose.Schema({
-  number: { type: Number, required: true, min: 0, unique: true, index: true },
-})
+const schema = new mongoose.Schema(
+  {
+    code: { type: Number, required: true, unique: true, index: true, min: 0 },
+  },
+  { timestamps: true }
+)
 
-const Group = mongoose.models.Group || mongoose.model('Group', schema)
+schema.index({ code: 1 }, { unique: true })
+
+const Group = mongoose?.models?.Group || mongoose.model('Group', schema)
 export default Group

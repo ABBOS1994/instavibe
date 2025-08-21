@@ -6,7 +6,7 @@ import {
   fetchChildren,
   saveChild,
   deleteChild,
-  fetchContent,
+  fetchContentForChild,
   saveContent,
   Success,
   Error,
@@ -19,11 +19,15 @@ import AdminLayout from '../../Layout/AdminLayout'
 
 export default function Content() {
   const [categories, setCategories] = useState([])
+  const [groupCodes, setGroupCodes] = useState([]) // Group CRUD -> codes
+
   const [currentCategory, setCurrentCategory] = useState(null)
   const [isEditing, setIsEditing] = useState(false)
   const [showModal, setShowModal] = useState(false)
+
   const [categoryChildren, setCategoryChildren] = useState({})
   const [expandedCategory, setExpandedCategory] = useState(null)
+
   const [currentChild, setCurrentChild] = useState(null)
   const [isEditingChild, setIsEditingChild] = useState(false)
   const [showChildModal, setShowChildModal] = useState(false)
@@ -34,6 +38,15 @@ export default function Content() {
 
   useEffect(() => {
     fetchData('category', setCategories)
+    fetchData('group', (list) => {
+      const codes = Array.isArray(list)
+        ? list
+            .map((g) => Number(g?.code))
+            .filter((n) => Number.isInteger(n) && n >= 0)
+            .sort((a, b) => a - b)
+        : []
+      setGroupCodes(codes)
+    })
   }, [])
 
   const handleShow = (category) => {
@@ -41,7 +54,6 @@ export default function Content() {
     setCurrentCategory(category || {})
     setShowModal(true)
   }
-
   const handleClose = () => setShowModal(false)
 
   const handleChange = (e) => {
@@ -78,26 +90,21 @@ export default function Content() {
       setExpandedCategory(null)
       return
     }
-
-    if (!categoryChildren[categoryId])
+    if (!categoryChildren[categoryId]) {
       fetchChildren(categoryId).then((data) =>
         setCategoryChildren((prev) => ({ ...prev, [categoryId]: data }))
       )
+    }
     setExpandedCategory(categoryId)
   }
 
-  const handleShowContent = async (contentOrChildId) => {
+  const handleShowContent = async (childId) => {
     try {
-      let res
-      if (/^[a-f\d]{24}$/i.test(contentOrChildId)) {
-        res = await fetchContent(null)
-        res.child = contentOrChildId
-      } else {
-        res = await fetchContent(contentOrChildId)
-      }
+      const res = await fetchContentForChild(childId)
+      const prepared = res && res._id ? res : { ...(res || {}), child: childId }
 
-      setIsEditingContent(!!res._id)
-      setCurrentContent(res)
+      setIsEditingContent(!!prepared._id)
+      setCurrentContent(prepared)
       setShowContentModal(true)
     } catch (e) {
       Error('Contentni yuklashda xato')
@@ -110,6 +117,7 @@ export default function Content() {
     setCurrentChild(child || {})
     setShowChildModal(true)
   }
+
   const handleChildDelete = (childId) => {
     deleteChild(childId).then(() => {
       setCategoryChildren((prevCategoryChildren) => {
@@ -160,11 +168,12 @@ export default function Content() {
   }
 
   const handleContentSave = () => {
-    if (!currentContent) {
-      console.error('Current content is not defined')
+    if (!currentContent) return
+    // POST uchun child borligini kafolatlaymiz
+    if (!isEditingContent && !currentContent.child) {
+      Error('Child aniqlanmagan')
       return
     }
-
     saveContent(isEditingContent, currentContent)
       .then((savedContent) => {
         setShowContentModal(false)
@@ -176,7 +185,7 @@ export default function Content() {
         )
       })
       .catch((e) => {
-        Error('Content saqlashda xato yuz berdi: ', e.message)
+        Error('Content saqlashda xato yuz berdi: ' + e.message)
       })
   }
 
@@ -193,6 +202,7 @@ export default function Content() {
         handleChildDelete={handleChildDelete}
         handleShowContent={handleShowContent}
       />
+
       <CategoryModal
         showModal={showModal}
         handleClose={handleClose}
@@ -200,7 +210,9 @@ export default function Content() {
         handleChange={handleChange}
         handleSave={handleSave}
         isEditing={isEditing}
+        groupCodes={groupCodes}
       />
+
       <ChildModal
         showChildModal={showChildModal}
         handleChildClose={handleChildClose}
@@ -209,6 +221,7 @@ export default function Content() {
         handleChildSave={handleChildSave}
         isEditingChild={isEditingChild}
       />
+
       <ContentModal
         showContentModal={showContentModal}
         handleContentClose={handleContentClose}

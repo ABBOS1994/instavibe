@@ -86,6 +86,9 @@ export default function UserPage() {
   const [viewerId, setViewerId] = useState(null)
   const [viewerRole, setViewerRole] = useState(null)
 
+  // 🔗 Group CRUD dan guruhlar ro‘yxati (kodlar)
+  const [groupCodes, setGroupCodes] = useState([])
+
   const [search, setSearch] = useState('')
   const [limit, setLimit] = useState(10)
   const [page, setPage] = useState(1)
@@ -111,7 +114,7 @@ export default function UserPage() {
         const roleRaw =
           typeof u?.role === 'string'
             ? u.role
-            : u?.role?._id || u?.role?.name || u?.role?.code
+            : u?.role?.name || u?.role?._id || u?.role?.code
         setViewerId(id)
         setViewerRole(roleRaw ? String(roleRaw).toLowerCase() : null)
         return
@@ -123,13 +126,29 @@ export default function UserPage() {
         const roleRaw =
           typeof payload?.role === 'string'
             ? payload.role
-            : payload?.role?._id || payload?.role?.name || payload?.role?.code
+            : payload?.role?.name || payload?.role?._id || payload?.role?.code
         setViewerId(id)
         setViewerRole(roleRaw ? String(roleRaw).toLowerCase() : null)
       }
     } catch (e) {
       console.warn('Viewer parse error', e)
     }
+  }, [])
+
+  // 🔗 Group CRUD: guruhlar ro'yxatini olib kelamiz
+  useEffect(() => {
+    ;(async () => {
+      try {
+        const res = await axiosInstance.get('group')
+        const codes = (Array.isArray(res.data) ? res.data : [])
+          .map((g) => Number(g.code))
+          .filter((n) => Number.isInteger(n) && n >= 0)
+          .sort((a, b) => a - b)
+        setGroupCodes(codes)
+      } catch (e) {
+        setGroupCodes([])
+      }
+    })()
   }, [])
 
   // 2) foydalanuvchilarni olish (faqat curator bo‘lsa query yuboramiz)
@@ -183,16 +202,8 @@ export default function UserPage() {
     }
   }, [viewerRole, viewerId, allUsers])
 
-  // group select uchun
-  const groupOptions = useMemo(() => {
-    const setNums = new Set()
-    allUsers.forEach((u) => {
-      if (u.group === 0 || (typeof u.group === 'number' && u.group > 0)) {
-        setNums.add(Number(u.group))
-      }
-    })
-    return Array.from(setNums).sort((a, b) => a - b)
-  }, [allUsers])
+  // group select uchun — endi faqat Group CRUD ro‘yxati
+  const groupOptions = groupCodes
 
   // local filter/sort/pagination (hammasi client-side)
   const filtered = useMemo(() => {
@@ -205,6 +216,7 @@ export default function UserPage() {
         (u.role || '').toLowerCase() !== roleFilter.toLowerCase()
       )
         return false
+
       // curator bo‘lsa server allaqachon filtrlagan — admin uchun esa lokal filtr ishlaydi
       if (
         curatorFilter &&
@@ -212,10 +224,12 @@ export default function UserPage() {
         u.curator !== curatorFilter
       )
         return false
+
       if (groupFilter !== '') {
         const gf = Number(groupFilter)
         if (!(u.group === gf)) return false
       }
+
       if (!q) return true
       const text = [
         u.login,
@@ -534,7 +548,7 @@ export default function UserPage() {
           setGroupFilter(v)
           setPage(1)
         }}
-        groupOptions={groupOptions}
+        groupOptions={groupOptions} // ✅ endi Group CRUD dan
         curators={curators}
         roles={Object.values(ROLES)}
         getCuratorName={getCuratorName}
@@ -567,7 +581,9 @@ export default function UserPage() {
         onSubmit={handleSubmit}
         curators={curators}
         editingId={editingId}
-        groups={groupOptions}
+        groups={groupOptions} // ✅ endi Group CRUD dan
+        viewerRole={viewerRole}
+        viewerId={viewerId}
       />
 
       <PushLogModal

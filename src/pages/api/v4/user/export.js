@@ -22,7 +22,10 @@ async function handler(req, res) {
 
   return authGuard([ROLES.ADMIN, ROLES.CURATOR])(req, res, async () => {
     try {
-      const users = await User.find().select('+password').lean()
+      const isCurator = String(req.user.role).toLowerCase() === ROLES.CURATOR
+      const query = isCurator ? { curator: req.user._id } : {}
+
+      const users = await User.find(query).select('+password').lean()
 
       const curatorIds = [
         ...new Set(
