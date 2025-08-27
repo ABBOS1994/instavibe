@@ -13,6 +13,5 @@ const schema = new mongoose.Schema(
   },
   { timestamps: true }
 )
-schema.index({ visibility: 1 })
 const Content = mongoose?.models?.Content || mongoose?.model('Content', schema)
 export default Content

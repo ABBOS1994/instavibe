@@ -8,23 +8,25 @@ async function handler(req, res) {
   const method = req.method
 
   if (method === 'GET') {
-    return authGuard([ROLES.CURATOR, ROLES.ADMIN, ROLES.VIP, ROLES.STANDARD])(
-      req,
-      res,
-      async () => {
-        try {
-          const content = await Model.findOne({ child: id })
-          return res.status(200).json(content)
-        } catch (e) {
-          console.error('[CONTENT GET ERROR]', e)
-          return res.status(500).json({
-            message: "Noma'lum xato yuz berdi",
-            error: e,
-            success: false,
-          })
-        }
+    return authGuard([
+      ROLES.CURATOR,
+      ROLES.ADMIN,
+      ROLES.VIP,
+      ROLES.STANDARD,
+      ROLES.PREMIUM,
+    ])(req, res, async () => {
+      try {
+        const content = await Model.findOne({ child: id })
+        return res.status(200).json(content)
+      } catch (e) {
+        console.error('[CONTENT GET ERROR]', e)
+        return res.status(500).json({
+          message: "Noma'lum xato yuz berdi",
+          error: e,
+          success: false,
+        })
       }
-    )
+    })
   }
 
   return authGuard([ROLES.ADMIN])(req, res, async () => {

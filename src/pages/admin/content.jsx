@@ -19,7 +19,7 @@ import AdminLayout from '../../Layout/AdminLayout'
 
 export default function Content() {
   const [categories, setCategories] = useState([])
-  const [groupCodes, setGroupCodes] = useState([]) // Group CRUD -> codes
+  const [groupCodes, setGroupCodes] = useState([])
 
   const [currentCategory, setCurrentCategory] = useState(null)
   const [isEditing, setIsEditing] = useState(false)

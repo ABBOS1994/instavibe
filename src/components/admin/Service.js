@@ -35,36 +35,17 @@ function normalizeVisibility(input) {
   }
   return []
 }
-export const fetchContent = async (contentId) => {
-  try {
-    if (!contentId) {
-      return {
-        title: '',
-        description: '',
-        video: '',
-        file: '',
-        child: null,
-      }
-    }
-    const { data } = await axiosInstance.get(`content/${contentId}`)
-    return data
-  } catch (e) {
-    handleError(e)
-  }
-}
 
 export const fetchContentForChild = async (childId) => {
   try {
     if (!childId) throw new Error('childId majburiy')
     try {
       const { data } = await axiosInstance.get(`content/${childId}`)
-      return data // mavjud kontent
+      return data
     } catch (err1) {
       if (err1?.response?.status !== 404) throw err1
       try {
-        const { data } = await axiosInstance.get(`content`, {
-          params: { child: childId },
-        })
+        const { data } = await axiosInstance.post(`content/${childId}`)
         return data
       } catch (err2) {
         if (err2?.response?.status !== 404) throw err2
@@ -161,9 +142,12 @@ export const deleteChild = async (childId) => {
 }
 
 export const saveContent = async (isEditing, contentData) => {
+  console.log(contentData)
   try {
     const method = isEditing ? 'put' : 'post'
-    const url = isEditing ? `content/${contentData._id}` : 'content'
+    const url = isEditing
+      ? `content/${contentData._id}`
+      : 'content/' + { ...contentData }
     const payload = {
       ...contentData,
       visibility: normalizeVisibility(contentData.visibility),

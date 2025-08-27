@@ -8,13 +8,13 @@ const schema = new mongoose.Schema(
       required: true,
     },
     title: { type: String, required: true },
+    description: { type: String, required: false },
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     sort: { type: Number, required: false, default: 0, increment: true },
   },
   { timestamps: true }
 )
-schema.index({ visibility: 1 })
 const Child = mongoose?.models?.Child || mongoose?.model('Child', schema)
 
 export default Child
