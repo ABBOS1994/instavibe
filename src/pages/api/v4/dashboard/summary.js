@@ -24,7 +24,6 @@ async function handler(req, res) {
         ...match,
         isActive: true,
       })
-      console.log(totalStudents, activeStudents)
       const passiveStudents = totalStudents - activeStudents
 
       const response = {

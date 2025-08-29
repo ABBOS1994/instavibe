@@ -30,7 +30,6 @@ export async function getServerSideProps(context) {
     const child = await Child.findOne({ _id: context?.params?.id })
       .select('sort _id')
       .lean()
-    console.log(child.sort)
     return {
       props: {
         content: content || {},

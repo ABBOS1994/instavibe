@@ -17,7 +17,6 @@ export default function Client() {
   const getData = async () => {
     try {
       const { data } = await axiosInstance.get('client')
-      console.log(data)
       setClients(data)
     } catch (e) {
       Error(e)

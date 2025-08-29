@@ -142,7 +142,6 @@ export const deleteChild = async (childId) => {
 }
 
 export const saveContent = async (isEditing, contentData) => {
-  console.log(contentData)
   try {
     const method = isEditing ? 'put' : 'post'
     const url = isEditing
