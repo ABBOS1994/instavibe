@@ -1,4 +1,5 @@
 /** @type {import('next').NextConfig} */
+import { withBotId } from 'botid/next/config'
 
 const nextConfig = {
   reactStrictMode: true,
@@ -12,4 +13,4 @@ const nextConfig = {
   },
 }
 
-export default nextConfig
+export default withBotId(nextConfig)
