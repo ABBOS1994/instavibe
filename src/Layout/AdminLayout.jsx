@@ -1,3 +1,4 @@
+//src/Layout/AdminLayout.jsx
 import React, { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/router'

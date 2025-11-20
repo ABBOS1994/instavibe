@@ -1,3 +1,4 @@
+//src/components/admin/ChildModal.jsx
 import React from 'react'
 import { Modal, Button, Form } from 'react-bootstrap'
 

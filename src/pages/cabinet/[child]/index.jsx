@@ -1,5 +1,4 @@
 // pages/cabinet/[child]/index.js
-
 import Layout from '../../../Layout'
 import PrivateRoute from '../../../components/PrivateRoute'
 import ChildContainer from '../../../components/child/ChildContainer'

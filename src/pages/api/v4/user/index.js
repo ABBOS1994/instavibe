@@ -9,10 +9,20 @@ import {
   validateLogin,
 } from '../../../../helpers/normalize'
 
-const parseGroup = (val) => {
-  if (val === null || val === undefined || val === '') return null
-  const n = Number(val)
-  return Number.isInteger(n) && n >= 0 ? n : null
+const parseGroups = (val) => {
+  if (val === null || val === undefined || val === '') return []
+  let raw = val
+  if (typeof raw === 'string') {
+    raw = raw
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean)
+  }
+  if (!Array.isArray(raw)) raw = [raw]
+  const nums = raw
+    .map((v) => Number(v))
+    .filter((n) => Number.isInteger(n) && n >= 0)
+  return Array.from(new Set(nums)).sort((a, b) => a - b)
 }
 
 export default async function handler(req, res) {
@@ -46,6 +56,7 @@ export default async function handler(req, res) {
       }
     })
   }
+
   if (req.method === 'POST') {
     return authGuard([ROLES.ADMIN, ROLES.CURATOR])(req, res, async () => {
       try {
@@ -94,21 +105,21 @@ export default async function handler(req, res) {
             .status(400)
             .json({ message: 'Foydalanuvchi allaqachon mavjud' })
         }
+
         const needsGroup = [ROLES.STANDARD, ROLES.VIP, ROLES.PREMIUM].includes(
           role
         )
-        let finalGroup = null
+        let finalGroups = []
         if (needsGroup) {
-          const n = parseGroup(group)
-          if (n === null) {
-            return res
-              .status(400)
-              .json({ message: 'Bu rol uchun group majburiy (0,1,2,...)' })
+          const parsed = parseGroups(group)
+          if (!parsed.length) {
+            return res.status(400).json({
+              message: 'Bu rol uchun kamida bitta group majburiy (0,1,2,...).',
+            })
           }
-          finalGroup = n
-        } else {
-          finalGroup = null
+          finalGroups = parsed
         }
+
         const roleLower = (req.user?.role || '').toLowerCase()
         const finalCurator =
           roleLower === ROLES.CURATOR
@@ -127,7 +138,7 @@ export default async function handler(req, res) {
           curator: finalCurator,
           phone: phone?.trim() || null,
           ...(finalUsername && { telegramUsername: finalUsername }),
-          group: finalGroup,
+          group: finalGroups,
         })
 
         await newUser.save()

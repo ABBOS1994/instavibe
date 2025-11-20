@@ -1,3 +1,4 @@
+//src/components/admin/CategoryRow.jsx
 import React from 'react'
 import { Table, Button, Badge } from 'react-bootstrap'
 

@@ -75,8 +75,6 @@ export default function PushPage() {
       })
 
       Success('✅ Push yuborildi')
-      console.log('Push result:', res.data.results)
-
       setShowModal(false)
       setMessage('')
       setSelected([])

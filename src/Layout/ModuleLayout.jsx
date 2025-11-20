@@ -1,13 +1,14 @@
+// src/Layout/ModuleLayout.jsx
 import React from 'react'
 import SectionLayout from './SectionLayout'
 import ModuleContainer from '../components/content/ModuleContainer'
 
-const ModuleLayout = ({ data, userGroup, isPrivileged = false }) => {
+const ModuleLayout = ({ data, userGroups = [], isPrivileged = false }) => {
   return (
     <SectionLayout text="KURS" description="MODULLAR">
       <ModuleContainer
         data={data?.filter((item) => !item.isDeleted)}
-        userGroup={userGroup}
+        userGroups={userGroups}
         isPrivileged={isPrivileged}
       />
     </SectionLayout>

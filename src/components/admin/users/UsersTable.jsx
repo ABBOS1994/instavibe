@@ -1,3 +1,4 @@
+// src/components/admin/users/UserTable.jsx
 import React, { useEffect } from 'react'
 import { Table, Spinner, Button, Form } from 'react-bootstrap'
 
@@ -26,12 +27,10 @@ export default function UsersTable({
   toggleSelectAllHeader,
   headerChkRef,
   allSelected,
-  // actions
   onEdit,
   onDelete,
   onOpenLog,
 }) {
-  // groupOptions yangilanganda, mavjud filtr ro'yxatda bo'lmasa reset qilamiz
   useEffect(() => {
     if (groupFilter === '') return
     const num = Number(groupFilter)
@@ -40,6 +39,15 @@ export default function UsersTable({
   }, [groupOptions, groupFilter, setGroupFilter])
 
   if (loading) return <Spinner animation="border" />
+
+  const renderGroups = (groupValue) => {
+    if (Array.isArray(groupValue)) {
+      if (!groupValue.length) return '—'
+      return groupValue.join(', ')
+    }
+    if (groupValue === 0 || typeof groupValue === 'number') return groupValue
+    return '—'
+  }
 
   return (
     <>
@@ -185,10 +193,7 @@ export default function UsersTable({
                     ? new Date(u.accessUntil).toISOString().slice(0, 10)
                     : ''}
                 </td>
-                <td>
-                  {u.group === 0 || typeof u.group === 'number' ? u.group : '—'}
-                </td>
-
+                <td>{renderGroups(u.group)}</td>
                 <td>{u.role}</td>
                 <td>{getCuratorName(u.curator)}</td>
                 <td className={u.isActive ? 'text-success' : 'text-danger'}>

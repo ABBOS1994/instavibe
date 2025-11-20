@@ -1,3 +1,4 @@
+//src/components/child/ChildContainer.jsx
 import React from 'react'
 import { Container, Row } from 'react-bootstrap'
 import Image from 'react-bootstrap/Image'

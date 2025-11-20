@@ -26,10 +26,20 @@ function validateLogin(login = '') {
 function normalizeTelegramUsername(username = '') {
   return username.replace(/^@/, '').toLowerCase()
 }
-const parseGroup = (val) => {
-  if (val === null || val === undefined || val === '') return null
-  const n = Number(val)
-  return Number.isInteger(n) && n >= 0 ? n : null
+const parseGroups = (val) => {
+  if (val === null || val === undefined || val === '') return []
+  let raw = val
+  if (typeof raw === 'string') {
+    raw = raw
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean)
+  }
+  if (!Array.isArray(raw)) raw = [raw]
+  const nums = raw
+    .map((v) => Number(v))
+    .filter((n) => Number.isInteger(n) && n >= 0)
+  return Array.from(new Set(nums)).sort((a, b) => a - b)
 }
 
 async function handler(req, res) {
@@ -131,7 +141,6 @@ async function handler(req, res) {
           continue
         }
 
-        // Role normalizatsiya + kurator cheklovi
         const requestedRole = (role || '').toLowerCase()
         const normalizedRole = Object.values(ROLES).includes(requestedRole)
           ? requestedRole
@@ -149,7 +158,6 @@ async function handler(req, res) {
           continue
         }
 
-        // Access muddat
         let accessDate = null
         if (accessUntil) {
           const parsed = new Date(accessUntil)
@@ -166,28 +174,24 @@ async function handler(req, res) {
             ? ['1', 'true', 'active', 'aktiv'].includes(isActive.toLowerCase())
             : true
 
-        // Group qoidasi
         const needsGroup = [ROLES.STANDARD, ROLES.VIP, ROLES.PREMIUM].includes(
           normalizedRole
         )
-        const parsedGroup = parseGroup(group)
-        if (needsGroup && parsedGroup === null) {
+        const parsedGroups = parseGroups(group)
+        if (needsGroup && !parsedGroups.length) {
           errors.push({
             line,
             login: finalLogin,
             reason:
-              'Group majburiy va 0 yoki undan katta butun son bo‘lishi kerak',
+              'Group majburiy va 0 yoki undan katta butun sonlardan iborat bo‘lishi kerak (1 yoki bir nechta, vergul bilan).',
           })
           continue
         }
 
-        // Kurator maydoni:
         let curatorUserId = null
         if (isCurator) {
-          // Kurator o‘ziga bog‘laydi
           curatorUserId = req.user._id
         } else {
-          // Admin bo‘lsa: CSVdagi kurator bo‘yicha topishga harakat qilamiz, bo‘lmasa fallback
           if (curator) {
             const foundCurator = await User.findOne({
               $or: [
@@ -222,7 +226,7 @@ async function handler(req, res) {
             firstName: firstName?.trim() || '',
             lastName: lastName?.trim() || '',
             isActive: activeFlag,
-            group: needsGroup ? parsedGroup : null,
+            group: needsGroup ? parsedGroups : [],
           })
           successCount++
         } catch (e) {

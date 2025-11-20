@@ -1,3 +1,4 @@
+// src/pages/admin/user.js
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import dayjs from 'dayjs'
 import AdminLayout from '../../Layout/AdminLayout'
@@ -24,7 +25,7 @@ const defaultUser = {
   phone: '',
   role: ROLES.STANDARD,
   curator: '',
-  group: null,
+  group: [],
   telegramUsername: '',
   telegramChatId: '',
   webPushSubscription: { endpoint: '', keys: { p256dh: '', auth: '' } },
@@ -35,11 +36,20 @@ const defaultUser = {
 
 const normalizeUser = (raw = {}, roles = ROLES) => {
   const roleStd = roles?.STANDARD || 'standard'
-  let group = null
-  if (raw?.group === 0) group = 0
-  else if (typeof raw?.group === 'number') group = raw.group
-  else if (typeof raw?.group === 'string' && /^\d+$/.test(raw.group))
-    group = parseInt(raw.group, 10)
+  let groups = []
+  const g = raw?.group
+  if (Array.isArray(g)) {
+    groups = g
+      .map((n) => Number(n))
+      .filter((n) => Number.isInteger(n) && n >= 0)
+  } else if (g === 0 || typeof g === 'number') {
+    groups = [g]
+  } else if (typeof g === 'string' && g.trim() !== '') {
+    groups = g
+      .split(',')
+      .map((s) => Number(s.trim()))
+      .filter((n) => Number.isInteger(n) && n >= 0)
+  }
 
   return {
     _id: raw._id || raw.id || '',
@@ -50,7 +60,7 @@ const normalizeUser = (raw = {}, roles = ROLES) => {
     phone: raw.phone || '',
     role: raw.role || roleStd,
     curator: raw.curator || '',
-    group,
+    group: groups,
     telegramUsername: raw.telegramUsername || '',
     telegramChatId: raw.telegramChatId || '',
     webPushSubscription: raw.webPushSubscription || {
@@ -82,11 +92,9 @@ export default function UserPage() {
   const [pushMessage, setPushMessage] = useState('')
   const [sending, setSending] = useState(false)
 
-  // viewer (current user) info
   const [viewerId, setViewerId] = useState(null)
   const [viewerRole, setViewerRole] = useState(null)
 
-  // 🔗 Group CRUD dan guruhlar ro‘yxati (kodlar)
   const [groupCodes, setGroupCodes] = useState([])
 
   const [search, setSearch] = useState('')
@@ -104,7 +112,6 @@ export default function UserPage() {
   const [excludedIds, setExcludedIds] = useState([])
   const headerChkRef = useRef(null)
 
-  // 1) joriy userni localStorage / token-dan o‘qish
   useEffect(() => {
     try {
       const uStr = localStorage.getItem('User')
@@ -135,7 +142,6 @@ export default function UserPage() {
     }
   }, [])
 
-  // 🔗 Group CRUD: guruhlar ro'yxatini olib kelamiz
   useEffect(() => {
     ;(async () => {
       try {
@@ -151,13 +157,12 @@ export default function UserPage() {
     })()
   }, [])
 
-  // 2) foydalanuvchilarni olish (faqat curator bo‘lsa query yuboramiz)
   const fetchUsers = async () => {
     setLoading(true)
     try {
       const params = {}
       if (viewerRole === ROLES.CURATOR && viewerId) {
-        params.curator = viewerId // faqat shu!
+        params.curator = viewerId
       }
       const res = await axiosInstance.get('user', { params })
       const list = res.data?.users || res.data || []
@@ -171,14 +176,11 @@ export default function UserPage() {
     }
   }
 
-  // 3) faqat viewer tayyor bo‘lganda fetch qilamiz
   useEffect(() => {
     if (!viewerRole) return
     fetchUsers()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [viewerRole, viewerId])
 
-  // 4) kuratorlar ro‘yxati:
   useEffect(() => {
     if (viewerRole === ROLES.CURATOR && viewerId) {
       let firstName = ''
@@ -202,10 +204,8 @@ export default function UserPage() {
     }
   }, [viewerRole, viewerId, allUsers])
 
-  // group select uchun — endi faqat Group CRUD ro‘yxati
   const groupOptions = groupCodes
 
-  // local filter/sort/pagination (hammasi client-side)
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
     return allUsers.filter((u) => {
@@ -217,7 +217,6 @@ export default function UserPage() {
       )
         return false
 
-      // curator bo‘lsa server allaqachon filtrlagan — admin uchun esa lokal filtr ishlaydi
       if (
         curatorFilter &&
         viewerRole !== ROLES.CURATOR &&
@@ -227,7 +226,12 @@ export default function UserPage() {
 
       if (groupFilter !== '') {
         const gf = Number(groupFilter)
-        if (!(u.group === gf)) return false
+        const userGroups = Array.isArray(u.group)
+          ? u.group
+          : u.group === 0 || Number.isInteger(Number(u.group))
+            ? [Number(u.group)]
+            : []
+        if (!userGroups.includes(gf)) return false
       }
 
       if (!q) return true
@@ -323,9 +327,15 @@ export default function UserPage() {
   }
 
   const handleEdit = (user) => {
+    const groups = Array.isArray(user.group)
+      ? user.group
+      : user.group === 0 || Number.isInteger(Number(user.group))
+        ? [Number(user.group)]
+        : []
     setFormData({
       ...defaultUser,
       ...user,
+      group: groups,
       password: '',
       accessUntil: user.accessUntil
         ? dayjs(user.accessUntil).format('YYYY-MM-DD')
@@ -366,13 +376,23 @@ export default function UserPage() {
     const isAdminOrCur =
       cleanData.role === ROLES.ADMIN || cleanData.role === ROLES.CURATOR
     if (isAdminOrCur) {
-      cleanData.group = null
+      cleanData.group = []
     } else {
-      const g = cleanData.group === 0 ? 0 : parseInt(cleanData.group, 10)
-      if (!Number.isInteger(g) || g < 0) {
-        return Error('Guruh raqami noto‘g‘ri (0 yoki undan katta butun son).')
+      const rawGroups = Array.isArray(cleanData.group)
+        ? cleanData.group
+        : cleanData.group === 0 || Number.isInteger(Number(cleanData.group))
+          ? [Number(cleanData.group)]
+          : []
+      const parsed = rawGroups
+        .map((v) => Number(v))
+        .filter((n) => Number.isInteger(n) && n >= 0)
+      const uniq = Array.from(new Set(parsed))
+      if (!uniq.length) {
+        return Error(
+          'Guruh raqami noto‘g‘ri. Kamida bitta 0 yoki undan katta butun son tanlang.'
+        )
       }
-      cleanData.group = g
+      cleanData.group = uniq
     }
 
     try {
@@ -392,7 +412,7 @@ export default function UserPage() {
         Success('Foydalanuvchi yangilandi')
       } else {
         if (viewerRole === ROLES.CURATOR && viewerId) {
-          cleanData.curator = viewerId // curator faqat o‘ziga yozadi
+          cleanData.curator = viewerId
         }
         const res = await axiosInstance.post('user', cleanData)
         const createdRaw = extractUserFromResponse(res)
@@ -500,7 +520,8 @@ export default function UserPage() {
         }}
         onAdd={() => {
           const initialForm = { ...defaultUser }
-          initialForm.group = groupOptions[0] ?? 0
+          const firstGroup = groupOptions[0]
+          initialForm.group = typeof firstGroup === 'number' ? [firstGroup] : []
 
           if (viewerRole === ROLES.CURATOR && viewerId) {
             initialForm.curator = viewerId
@@ -548,7 +569,7 @@ export default function UserPage() {
           setGroupFilter(v)
           setPage(1)
         }}
-        groupOptions={groupOptions} // ✅ endi Group CRUD dan
+        groupOptions={groupOptions}
         curators={curators}
         roles={Object.values(ROLES)}
         getCuratorName={getCuratorName}
@@ -581,7 +602,7 @@ export default function UserPage() {
         onSubmit={handleSubmit}
         curators={curators}
         editingId={editingId}
-        groups={groupOptions} // ✅ endi Group CRUD dan
+        groups={groupOptions}
         viewerRole={viewerRole}
         viewerId={viewerId}
       />

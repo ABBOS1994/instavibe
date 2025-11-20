@@ -1,3 +1,4 @@
+// src/pages/cabinet/index.js
 import React, { useEffect, useState } from 'react'
 import Layout from '../../Layout'
 import PrivateRoute from '../../components/PrivateRoute'
@@ -14,25 +15,46 @@ import CategoryModel from '../../models/Category'
 import axiosInstance from '../../config/axiosConfig'
 import { ROLES } from '../../constants/roles'
 
+function normalizeGroups(rawSingle, rawMulti) {
+  const result = []
+
+  const pushVal = (val) => {
+    if (val === null || val === undefined || val === '') return
+    if (Array.isArray(val)) {
+      val.forEach(pushVal)
+      return
+    }
+    const n = Number(val)
+    if (Number.isInteger(n) && n >= 0 && !result.includes(n)) {
+      result.push(n)
+    }
+  }
+
+  pushVal(rawMulti)
+  if (!result.length) pushVal(rawSingle)
+
+  return result.sort((a, b) => a - b)
+}
+
 export default function CabinetPage({
   banners,
   links,
   modules,
   initialUserGroup,
 }) {
-  const [userGroup, setUserGroup] = useState(
-    typeof initialUserGroup === 'number' ? initialUserGroup : null
-  )
-  const [isPrivileged, setIsPrivileged] = useState(false) // admin|curator uchun
+  const [userGroups, setUserGroups] = useState([])
+  const [isPrivileged, setIsPrivileged] = useState(false)
 
   useEffect(() => {
     axiosInstance
       .get('auth/me')
       .then((res) => {
-        const g = res?.data?.group
-        if (g === 0 || Number.isInteger(Number(g))) {
-          setUserGroup(Number(g))
-        }
+        const single = res?.data?.group
+        const multi = res?.data?.groups
+        const groupsArr = normalizeGroups(single, multi)
+
+        setUserGroups(groupsArr)
+
         const rawRole =
           res?.data?.role?.name || res?.data?.role?._id || res?.data?.role
         const role = rawRole ? String(rawRole).toLowerCase() : null
@@ -50,7 +72,7 @@ export default function CabinetPage({
         <Link data={links} />
         <Module
           data={modules}
-          userGroup={userGroup}
+          userGroups={userGroups}
           isPrivileged={isPrivileged}
         />
       </Layout>

@@ -70,7 +70,8 @@ export function authGuard(allowedRoles = null) {
         login: user.login,
         role: user.role,
         accessUntil: user.accessUntil,
-        group: typeof user.group === 'number' ? user.group : null,
+        group: user.group,
+        ...user,
       }
 
       return next()

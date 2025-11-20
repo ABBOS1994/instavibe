@@ -1,4 +1,4 @@
-// ✅ Optimallashtirilgan SlugComponent.jsx (demo yo'q)
+//src/components/content/SlugComponent.jsx
 import React from 'react'
 import { Card, Col, Image } from 'react-bootstrap'
 import Link from 'next/link'

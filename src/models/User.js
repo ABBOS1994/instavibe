@@ -2,6 +2,27 @@
 import mongoose from 'mongoose'
 import { ROLES } from '../constants/roles'
 
+// src/models/User.js
+
+async function dropOldIndexes() {
+  const conn = mongoose.connection
+  if (!conn?.collections?.users) return
+
+  try {
+    const indexes = await conn.collections.users.indexes()
+
+    if (indexes.some((i) => i.name === 'telegramUsername_1')) {
+      await conn.collections.users.dropIndex('telegramUsername_1')
+    }
+
+    if (indexes.some((i) => i.name === 'telegramChatId_1')) {
+      await conn.collections.users.dropIndex('telegramChatId_1')
+    }
+  } catch (e) {
+    console.log('Index drop skipped:', e.message)
+  }
+}
+
 const isStudentRole = (role) =>
   [ROLES.STANDARD, ROLES.PREMIUM, ROLES.VIP].includes(role)
 
@@ -21,38 +42,66 @@ const UserSchema = new mongoose.Schema(
 
     password: { type: String, required: true, select: false },
     phone: { type: String, default: null, sparse: true },
+
     role: {
       type: String,
       enum: Object.values(ROLES),
       default: ROLES.STANDARD,
       index: true,
     },
-    group: {
-      type: Number,
-      min: 0,
-      default: null,
-      index: true,
 
+    group: {
+      type: [Number],
+      default: [],
+      index: true,
       required: function () {
         return isStudentRole(this.role)
       },
-
       validate: {
         validator: function (v) {
+          const arr = Array.isArray(v)
+            ? v
+            : v === null || v === undefined
+              ? []
+              : [v]
+
           if (isPrivilegedRole(this.role)) {
-            return v === null || v === undefined
+            return arr.length === 0
           }
-          return Number.isInteger(v) && v >= 0
+
+          if (!isStudentRole(this.role)) {
+            return true
+          }
+
+          if (!arr.length) {
+            return false
+          }
+
+          return arr.every((n) => Number.isInteger(n) && n >= 0)
         },
         message:
-          'Rolga mos group qiymati noto‘g‘ri: admin/curator uchun null; boshqalar uchun 0 yoki undan katta butun son bo‘lishi kerak.',
+          'Rolga mos group qiymati noto‘g‘ri: admin/curator uchun bo‘sh; boshqalar uchun kamida bitta 0 yoki undan katta butun son bo‘lishi kerak.',
       },
-
       set: (val) => {
-        if (val === null || val === undefined || val === '') return null
-        const n = Number(val)
-        if (Number.isInteger(n) && n >= 0) return n
-        return val
+        if (val === null || val === undefined || val === '') return []
+        let raw = val
+
+        if (typeof raw === 'string') {
+          raw = raw
+            .split(',')
+            .map((s) => s.trim())
+            .filter(Boolean)
+        }
+
+        if (!Array.isArray(raw)) {
+          raw = [raw]
+        }
+
+        const nums = raw
+          .map((v) => Number(v))
+          .filter((n) => Number.isInteger(n) && n >= 0)
+
+        return Array.from(new Set(nums)).sort((a, b) => a - b)
       },
     },
 
@@ -68,10 +117,12 @@ const UserSchema = new mongoose.Schema(
     telegramUsername: {
       type: String,
       default: null,
-      unique: true,
-      sparse: true,
     },
-    telegramChatId: { type: String, default: null, unique: true, sparse: true },
+
+    telegramChatId: {
+      type: String,
+      default: null,
+    },
 
     notificationSettings: {
       telegram: { type: Boolean, default: false },
@@ -84,11 +135,36 @@ const UserSchema = new mongoose.Schema(
   },
   { timestamps: true }
 )
+
 UserSchema.pre('validate', function (next) {
   if (isPrivilegedRole(this.role)) {
-    this.group = null
+    this.group = []
   }
   next()
 })
 
-export default mongoose.models.User || mongoose.model('User', UserSchema)
+UserSchema.index(
+  { telegramUsername: 1 },
+  {
+    unique: true,
+    sparse: true,
+    partialFilterExpression: { telegramUsername: { $exists: true, $ne: null } },
+  }
+)
+
+UserSchema.index(
+  { telegramChatId: 1 },
+  {
+    unique: true,
+    sparse: true,
+    partialFilterExpression: { telegramChatId: { $exists: true, $ne: null } },
+  }
+)
+
+if (mongoose.models.User) {
+  delete mongoose.models.User
+}
+
+dropOldIndexes()
+
+export default mongoose.model('User', UserSchema)

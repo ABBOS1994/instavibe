@@ -63,6 +63,16 @@ async function handler(req, res) {
 
       const formattedUsers = users.map((u) => {
         const curator = curatorsMap[u.curator?.toString()] || {}
+        const rawGroup = u.group
+        let groupsArr = []
+        if (Array.isArray(rawGroup)) {
+          groupsArr = rawGroup.filter((n) => Number.isInteger(n) && n >= 0)
+        } else if (
+          rawGroup === 0 ||
+          (typeof rawGroup === 'number' && rawGroup > 0)
+        ) {
+          groupsArr = [rawGroup]
+        }
         return {
           login: u.login || '',
           password: u.password || '',
@@ -77,10 +87,7 @@ async function handler(req, res) {
             : '',
           isActive: u.isActive ? '1' : '0',
           curator: curator.firstName || curator.login || 'admin/curator',
-          group:
-            u.group === 0 || (typeof u.group === 'number' && u.group > 0)
-              ? u.group
-              : '',
+          group: groupsArr.length ? groupsArr.join(',') : '',
         }
       })
 

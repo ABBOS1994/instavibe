@@ -1,3 +1,4 @@
+//src/pages/cabinet/[child]/[id].jsx
 import Layout from '../../../Layout'
 import PrivateRoute from '../../../components/PrivateRoute'
 import ContentComponent from '../../../components/ContentComponent'

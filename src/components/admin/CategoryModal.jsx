@@ -1,3 +1,4 @@
+//src/components/admin/categoryModal.jsx
 import React, { useMemo, useCallback } from 'react'
 import { Modal, Form, Badge } from 'react-bootstrap'
 

@@ -1,3 +1,4 @@
+// src/components/admin/users/UserFormModal/index.js
 import React, { useEffect } from 'react'
 import { Button, Col, Form, Modal, Row } from 'react-bootstrap'
 import { ROLES } from '../../../constants/roles'
@@ -10,7 +11,7 @@ export default function UserFormModal({
   onSubmit,
   curators = [],
   editingId,
-  groups = [], // ← Group CRUD dan kelgan kodlar ro'yxati (masalan [0,1,2])
+  groups = [],
   viewerRole,
   viewerId,
 }) {
@@ -20,7 +21,7 @@ export default function UserFormModal({
   const isViewerCurator = viewerRole === ROLES.CURATOR
 
   const handleChange = (e) => {
-    const { name, value, type, checked } = e.target
+    const { name, value, type, checked, multiple, options } = e.target
 
     if (name.startsWith('notificationSettings.')) {
       const key = name.split('.')[1]
@@ -40,16 +41,16 @@ export default function UserFormModal({
         const next = { ...prev, role: newRole }
         if (newRole === ROLES.ADMIN || newRole === ROLES.CURATOR) {
           next.curator = ''
-          next.group = null
+          next.group = []
         } else {
           if (isViewerCurator) {
             next.curator = viewerId || ''
           } else if (!prev.curator && curators.length > 0) {
             next.curator = curators[0]._id
           }
-          // default group
-          if (next.group === null || next.group === undefined) {
-            next.group = groups?.[0] ?? 0
+          if (!Array.isArray(next.group) || next.group.length === 0) {
+            const first = groups?.[0]
+            next.group = typeof first === 'number' ? [first] : []
           }
         }
         return next
@@ -58,11 +59,23 @@ export default function UserFormModal({
     }
 
     if (name === 'group') {
-      const n = Number(value)
-      setFormData((prev) => ({
-        ...prev,
-        group: Number.isInteger(n) && n >= 0 ? n : 0,
-      }))
+      if (multiple) {
+        const selected = Array.from(options)
+          .filter((o) => o.selected)
+          .map((o) => Number(o.value))
+          .filter((n) => Number.isInteger(n) && n >= 0)
+        const uniq = Array.from(new Set(selected))
+        setFormData((prev) => ({
+          ...prev,
+          group: uniq,
+        }))
+      } else {
+        const n = Number(value)
+        setFormData((prev) => ({
+          ...prev,
+          group: Number.isInteger(n) && n >= 0 ? [n] : [],
+        }))
+      }
       return
     }
 
@@ -72,21 +85,39 @@ export default function UserFormModal({
     }))
   }
 
-  // Modal ochilganda (yoki groups o'zgarganda) default guruhni tekshiramiz
   useEffect(() => {
     if (!show) return
     if (isTargetAdminOrCurator) return
     setFormData((prev) => {
-      // agar mavjud group groups ro'yxatida yo'q bo'lsa, birinchisini yoki 0 ni qo'yamiz
-      const has = prev.group === 0 || groups.includes(prev.group ?? NaN)
+      const raw = prev.group
+      let groupsArr = []
+      if (Array.isArray(raw)) {
+        groupsArr = raw
+          .map((n) => Number(n))
+          .filter((n) => Number.isInteger(n) && n >= 0)
+      } else if (raw === 0 || Number.isInteger(Number(raw))) {
+        groupsArr = [Number(raw)]
+      }
+      if (!groupsArr.length && Array.isArray(groups) && groups.length) {
+        const first = groups[0]
+        if (Number.isInteger(first) && first >= 0) {
+          groupsArr = [first]
+        }
+      }
       return {
         ...prev,
         curator: isViewerCurator ? viewerId || prev.curator : prev.curator,
-        group: has ? prev.group : (groups?.[0] ?? 0),
+        group: groupsArr,
       }
     })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [show, groups, isTargetAdminOrCurator, isViewerCurator, viewerId])
+  }, [
+    show,
+    groups,
+    isTargetAdminOrCurator,
+    isViewerCurator,
+    viewerId,
+    setFormData,
+  ])
 
   return (
     <Modal show={show} onHide={onHide} centered size="lg">
@@ -183,7 +214,6 @@ export default function UserFormModal({
               </Form.Select>
             </Col>
 
-            {/* Admin bo'lsa kurator selectini ko'rsatmaymiz; curator ko'rishda esa o'zi avtomatik */}
             {!isTargetAdminOrCurator && !isViewerCurator && (
               <Col>
                 <Form.Label column={'lg'}>Kurator</Form.Label>
@@ -215,17 +245,17 @@ export default function UserFormModal({
             )}
           </Row>
 
-          {/* Oddiy userlar uchun group tanlovi (0/1/2...) */}
           {!isTargetAdminOrCurator && (
             <Row className="mb-2">
               <Col>
-                <Form.Label column={'lg'}>Guruh</Form.Label>
+                <Form.Label column={'lg'}>Guruhlar</Form.Label>
                 <Form.Select
                   name="group"
+                  multiple
                   value={
-                    formData.group === 0
-                      ? 0
-                      : (formData.group ?? groups?.[0] ?? 0)
+                    Array.isArray(formData.group)
+                      ? formData.group.map((g) => String(g))
+                      : []
                   }
                   onChange={handleChange}
                   required
@@ -233,7 +263,7 @@ export default function UserFormModal({
                 >
                   {Array.isArray(groups) && groups.length > 0 ? (
                     groups.map((g) => (
-                      <option key={g} value={g}>
+                      <option key={g} value={String(g)}>
                         {g}
                       </option>
                     ))

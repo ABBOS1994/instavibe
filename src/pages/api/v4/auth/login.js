@@ -13,6 +13,28 @@ function normalize(str = '') {
   return str.replace(/\s+/g, '').toLowerCase()
 }
 
+function extractGroups(user) {
+  const result = []
+
+  const pushVal = (val) => {
+    if (val === null || val === undefined || val === '') return
+    if (Array.isArray(val)) {
+      val.forEach(pushVal)
+      return
+    }
+    const n = Number(val)
+    if (Number.isInteger(n) && n >= 0 && !result.includes(n)) {
+      result.push(n)
+    }
+  }
+
+  pushVal(user.group)
+
+  pushVal(user.groups)
+
+  return result
+}
+
 async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({
@@ -89,11 +111,17 @@ async function handler(req, res) {
     user.lastSeen = new Date()
     await user.save({ validateBeforeSave: false })
 
+    const groupsArr = extractGroups(user)
+    const singleGroup = groupsArr.length ? groupsArr[0] : null
+
     const publicUser = {
       _id: user._id,
       login: user.login,
       role: user.role,
       accessUntil: user.accessUntil,
+      group: singleGroup,
+      groups: groupsArr,
+      ...user,
     }
 
     const token = jwt.sign(publicUser, process.env.CACHE_PREFIX, {

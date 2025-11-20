@@ -1,3 +1,4 @@
+//src/components/ContentComponent.jsx
 import Link from 'next/link'
 import { useRouter } from 'next/router'
 import Image from 'react-bootstrap/Image'

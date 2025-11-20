@@ -10,10 +10,20 @@ import {
   validateLogin,
 } from '../../../../helpers/normalize'
 
-const parseGroup = (val) => {
-  if (val === null || val === undefined || val === '') return null
-  const n = Number(val)
-  return Number.isInteger(n) && n >= 0 ? n : null
+const parseGroups = (val) => {
+  if (val === null || val === undefined || val === '') return []
+  let raw = val
+  if (typeof raw === 'string') {
+    raw = raw
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean)
+  }
+  if (!Array.isArray(raw)) raw = [raw]
+  const nums = raw
+    .map((v) => Number(v))
+    .filter((n) => Number.isInteger(n) && n >= 0)
+  return Array.from(new Set(nums)).sort((a, b) => a - b)
 }
 
 async function handler(req, res) {
@@ -99,7 +109,6 @@ async function handler(req, res) {
           ''
         ).toLowerCase()
 
-        // Kurator maydoni qoidası:
         if ([ROLES.STANDARD, ROLES.PREMIUM, ROLES.VIP].includes(nextRole)) {
           if (requesterRole === ROLES.CURATOR) {
             updateFields.curator = req.user._id
@@ -121,22 +130,22 @@ async function handler(req, res) {
         }
 
         if (nextRole === ROLES.ADMIN || nextRole === ROLES.CURATOR) {
-          updateFields.group = null
+          updateFields.group = []
         } else {
           if (updateFields.group !== undefined) {
-            const g = parseGroup(updateFields.group)
-            if (g === null) {
+            const parsed = parseGroups(updateFields.group)
+            if (!parsed.length) {
               return res.status(400).json({
-                message: 'Group 0 yoki undan katta butun son bo‘lishi kerak',
+                message:
+                  'Group majburiy va 0 yoki undan katta butun sonlardan iborat bo‘lishi kerak',
                 success: false,
               })
             }
-            updateFields.group = g
+            updateFields.group = parsed
           } else {
-            const hasExistingGroup =
-              targetUser.group === 0 ||
-              (typeof targetUser.group === 'number' && targetUser.group > 0)
-            if (!hasExistingGroup) {
+            const existing =
+              Array.isArray(targetUser.group) && targetUser.group.length > 0
+            if (!existing) {
               return res.status(400).json({
                 message: 'Bu rol uchun group majburiy',
                 success: false,
